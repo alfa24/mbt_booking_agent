@@ -1,4 +1,6 @@
 .env
+.env.local
+docker-compose.override.yaml
 .venv/
 __pycache__/
 *.pyc

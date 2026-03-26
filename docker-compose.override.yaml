@@ -1,4 +1,0 @@
-services:
-  bot:
-    # Используем сетевой стек контейнера adguard-vpn
-    network_mode: container:adguard-vpn

@@ -27,7 +27,7 @@ Backend также интегрируется с внешними сервиса
 
 | Задача | Описание | Статус | Документы |
 |--------|----------|--------|-----------|
-| 01 | Выбор backend-стека и ADR | 📋 Planned | [план](tasks/task-01-stack-adr/plan.md) \| [summary](tasks/task-01-stack-adr/summary.md) |
+| 01 | Выбор backend-стека и ADR | ✅ Done | [план](tasks/task-01-stack-adr/plan.md) \| [summary](tasks/task-01-stack-adr/summary.md) |
 | 02 | Генерация каркаса проекта | 📋 Planned | [план](tasks/task-02-scaffold/plan.md) \| [summary](tasks/task-02-scaffold/summary.md) |
 | 03 | Проектирование API-контрактов | 📋 Planned | [план](tasks/task-03-api-contracts/plan.md) \| [summary](tasks/task-03-api-contracts/summary.md) |
 | 04 | Реализация API бронирований | 📋 Planned | [план](tasks/task-04-booking-api/plan.md) \| [summary](tasks/task-04-booking-api/summary.md) |
@@ -38,7 +38,7 @@ Backend также интегрируется с внешними сервиса
 
 ---
 
-## Задача 01: Выбор backend-стека и ADR 📋
+## Задача 01: Выбор backend-стека и ADR ✅
 
 ### Цель
 
@@ -48,25 +48,25 @@ Backend также интегрируется с внешними сервиса
 
 ### Состав работ
 
-- [ ] Выполнить `/find-skills` для backend-фреймворков
-- [ ] Сравнение FastAPI vs Django vs другие фреймворки
-- [ ] Выбор ORM (SQLAlchemy 2.0 / Django ORM / другие)
-- [ ] Определение подхода к валидации (Pydantic v2)
-- [ ] Создание ADR-002: Backend Framework
-- [ ] Утверждение стека
-- [ ] Актуализация `.qoder/rules/conventions.md` — добавить раздел о backend
+- [x] Выполнить `/find-skills` для backend-фреймворков
+- [x] Сравнение FastAPI vs Django vs другие фреймворки
+- [x] Выбор ORM (SQLAlchemy 2.0 / Django ORM / другие)
+- [x] Определение подхода к валидации (Pydantic v2)
+- [x] Создание ADR-002: Backend Framework
+- [x] Утверждение стека
+- [x] Актуализация `.qoder/rules/conventions.md` — добавить раздел о backend
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] ADR создан и содержит обоснование выбора
-- [ ] Все внешние зависимости зафиксированы с версиями
-- [ ] Conventions обновлены — структура backend, паттерны, naming
+- [x] ADR создан и содержит обоснование выбора
+- [x] Все внешние зависимости зафиксированы с версиями
+- [x] Conventions обновлены — структура backend, паттерны, naming
 
 ### Проверка пользователем
 
-- [ ] Открыть `docs/adr/adr-002-backend-framework.md` — проверить обоснование
-- [ ] Открыть `.qoder/rules/conventions.md` — проверить раздел о backend
-- [ ] Убедиться, что выбор согласован
+- [x] Открыть `docs/adr/adr-002-backend-framework.md` — проверить обоснование
+- [x] Открыть `.qoder/rules/conventions.md` — проверить раздел о backend
+- [x] Убедиться, что выбор согласован
 
 ### Артефакты
 

@@ -44,17 +44,34 @@ Backend также интегрируется с внешними сервиса
 
 Определить технологический стек backend и зафиксировать архитектурное решение в ADR.
 
+> **Рекомендация:** Перед выбором выполнить `/find-skills` для поиска подходящих skills (fastapi, django, python-api).
+
 ### Состав работ
 
-- [ ] Сравнение FastAPI vs Flask vs другие фреймворки
-- [ ] Выбор ORM (SQLAlchemy 2.0 / Tortoise / другие)
+- [ ] Выполнить `/find-skills` для backend-фреймворков
+- [ ] Сравнение FastAPI vs Django vs другие фреймворки
+- [ ] Выбор ORM (SQLAlchemy 2.0 / Django ORM / другие)
 - [ ] Определение подхода к валидации (Pydantic v2)
 - [ ] Создание ADR-002: Backend Framework
 - [ ] Утверждение стека
+- [ ] Актуализация `.qoder/rules/conventions.md` — добавить раздел о backend
+
+### Definition of Done (самопроверка агента)
+
+- [ ] ADR создан и содержит обоснование выбора
+- [ ] Все внешние зависимости зафиксированы с версиями
+- [ ] Conventions обновлены — структура backend, паттерны, naming
+
+### Проверка пользователем
+
+- [ ] Открыть `docs/adr/adr-002-backend-framework.md` — проверить обоснование
+- [ ] Открыть `.qoder/rules/conventions.md` — проверить раздел о backend
+- [ ] Убедиться, что выбор согласован
 
 ### Артефакты
 
 - `docs/adr/adr-002-backend-framework.md` — архитектурное решение
+- `.qoder/rules/conventions.md` — обновлённые соглашения
 - Запись в `docs/adr/README.md`
 
 ### Документы
@@ -70,14 +87,37 @@ Backend также интегрируется с внешними сервиса
 
 Создать структуру backend-проекта с настроенными зависимостями и инструментами разработки.
 
+> **Рекомендация:** Использовать skill для генерации каркаса (`/find-skills` fastapi-template / django-template).
+
 ### Состав работ
 
 - [ ] Создание директории `backend/`
-- [ ] Настройка pyproject.toml с зависимостями
+- [ ] Настройка `pyproject.toml` с зависимостями
 - [ ] Структура модулей: api/, models/, schemas/, services/, config.py
 - [ ] Настройка линтеров (ruff) и форматирования
-- [ ] Базовый main.py с запуском сервера
+- [ ] Базовый `main.py` с запуском сервера
 - [ ] Конфигурация через Pydantic-settings
+- [ ] Обновление `.env.example` — добавить переменные backend
+- [ ] Обновление `Makefile` — добавить `make run-backend`, `make lint-backend`
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Проект запускается без ошибок: `make run-backend` или `uv run python -m backend.main`
+- [ ] Линтинг проходит: `make lint-backend`
+- [ ] Сервер отвечает на `GET /health` с кодом 200
+- [ ] `.env.example` содержит все необходимые переменные
+
+### Проверка пользователем
+
+```bash
+# Запуск backend
+make run-backend
+
+# Проверка health endpoint
+curl http://localhost:8000/health
+
+# Ожидаемый ответ: {"status": "ok"}
+```
 
 ### Артефакты
 
@@ -87,6 +127,8 @@ Backend также интегрируется с внешними сервиса
 - `backend/api/__init__.py` — роутеры
 - `backend/schemas/__init__.py` — Pydantic-схемы
 - `pyproject.toml` — обновлённый
+- `.env.example` — обновлённый
+- `Makefile` — обновлённый
 
 ### Документы
 
@@ -99,16 +141,40 @@ Backend также интегрируется с внешними сервиса
 
 ### Цель
 
-Спроектировать и задокументировать REST API endpoints для всех сущностей системы.
+Спроектировать и задокументировать REST API endpoints для сценариев: вопрос к ассистенту и фиксация выполненного ДЗ.
+
+> **Рекомендация:** Использовать skill для API-дизайна (`/find-skills` api-design).
 
 ### Состав работ
 
-- [ ] Определение ресурсов: users, houses, bookings, tariffs
-- [ ] Проектирование endpoints (RESTful)
+- [ ] Определение ресурсов: users, houses, bookings, tariffs, messages
+- [ ] Проектирование endpoints (RESTful):
+  - `POST /api/v1/chat` — отправка сообщения ассистенту
+  - `POST /api/v1/homework` — фиксация выполненного ДЗ
 - [ ] Определение форматов запросов/ответов (Pydantic схемы)
 - [ ] Коды ошибок и формат error response
-- [ ] Версионирование API (v1 префикс)
+- [ ] Версионирование API (`/api/v1/` префикс)
 - [ ] Документирование в формате OpenAPI/Swagger
+- [ ] Актуализация `docs/data-model.md` — уточнить поля сущностей при необходимости
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Все схемы валидируются Pydantic
+- [ ] OpenAPI документация доступна по `/docs` (Swagger UI)
+- [ ] Все endpoints имеют описание и примеры
+- [ ] Коды ошибок задокументированы
+
+### Проверка пользователем
+
+```bash
+# Запуск backend
+make run-backend
+
+# Открытие Swagger UI
+open http://localhost:8000/docs
+
+# Проверка: все endpoints отображаются, схемы валидны
+```
 
 ### Артефакты
 
@@ -116,8 +182,10 @@ Backend также интегрируется с внешними сервиса
 - `backend/schemas/house.py` — схемы домов
 - `backend/schemas/booking.py` — схемы бронирований
 - `backend/schemas/tariff.py` — схемы тарифов
+- `backend/schemas/message.py` — схемы сообщений
 - `backend/schemas/common.py` — общие схемы (ErrorResponse, PaginatedResponse)
 - `docs/api/openapi.yaml` или автодокументация
+- `docs/data-model.md` — обновлённый
 
 ### Документы
 
@@ -134,20 +202,41 @@ Backend также интегрируется с внешними сервиса
 
 ### Состав работ
 
-- [ ] GET /api/v1/bookings — список бронирований (фильтры: user_id, house_id, status)
-- [ ] GET /api/v1/bookings/{id} — получение бронирования
-- [ ] POST /api/v1/bookings — создание бронирования
-- [ ] PATCH /api/v1/bookings/{id} — обновление бронирования
-- [ ] DELETE /api/v1/bookings/{id} — отмена бронирования
+- [ ] `GET /api/v1/bookings` — список бронирований (фильтры: user_id, house_id, status)
+- [ ] `GET /api/v1/bookings/{id}` — получение бронирования
+- [ ] `POST /api/v1/bookings` — создание бронирования
+- [ ] `PATCH /api/v1/bookings/{id}` — обновление бронирования
+- [ ] `DELETE /api/v1/bookings/{id}` — отмена бронирования
 - [ ] Валидация дат (check_in < check_out)
 - [ ] Проверка пересечения дат для одного дома
 - [ ] Расчёт суммы на основе тарифов и состава гостей
+- [ ] Базовые API-тесты для всех endpoints (pytest + httpx)
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Все endpoints возвращают корректные HTTP-коды (200, 201, 400, 404, 422)
+- [ ] Валидация работает — невалидные данные отклоняются
+- [ ] Тесты проходят: `pytest backend/tests/`
+- [ ] Покрытие бронирований > 80%
+
+### Проверка пользователем
+
+```bash
+# Запуск тестов
+pytest backend/tests/test_bookings.py -v
+
+# Ручная проверка через Swagger
+curl -X POST http://localhost:8000/api/v1/bookings \
+  -H "Content-Type: application/json" \
+  -d '{"house_id": 1, "check_in": "2024-06-01", "check_out": "2024-06-03", "guests": [{"type": "adult", "count": 2}]}'
+```
 
 ### Артефакты
 
 - `backend/api/bookings.py` — роутеры бронирований
 - `backend/services/booking.py` — бизнес-логика
 - `backend/models/booking.py` — SQLAlchemy модель (или in-memory заглушка)
+- `backend/tests/test_bookings.py` — тесты
 
 ### Документы
 
@@ -164,13 +253,30 @@ Backend также интегрируется с внешними сервиса
 
 ### Состав работ
 
-- [ ] GET /api/v1/houses — список домов
-- [ ] GET /api/v1/houses/{id} — детали дома
-- [ ] GET /api/v1/houses/{id}/calendar — доступность дома
-- [ ] GET /api/v1/users/{id} — профиль пользователя
-- [ ] POST /api/v1/users — создание пользователя (из Telegram)
-- [ ] GET /api/v1/tariffs — справочник тарифов
-- [ ] GET /api/v1/tariffs/{id} — детали тарифа
+- [ ] `GET /api/v1/houses` — список домов
+- [ ] `GET /api/v1/houses/{id}` — детали дома
+- [ ] `GET /api/v1/houses/{id}/calendar` — доступность дома
+- [ ] `GET /api/v1/users/{id}` — профиль пользователя
+- [ ] `POST /api/v1/users` — создание пользователя (из Telegram)
+- [ ] `GET /api/v1/tariffs` — справочник тарифов
+- [ ] `GET /api/v1/tariffs/{id}` — детали тарифа
+- [ ] API-тесты для всех endpoints
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Все endpoints работают корректно
+- [ ] Тесты проходят: `pytest backend/tests/test_houses.py backend/tests/test_users.py`
+- [ ] Swagger UI отображает все endpoints
+
+### Проверка пользователем
+
+```bash
+# Запуск тестов
+pytest backend/tests/test_houses.py backend/tests/test_users.py -v
+
+# Проверка списка домов
+curl http://localhost:8000/api/v1/houses
+```
 
 ### Артефакты
 
@@ -179,6 +285,8 @@ Backend также интегрируется с внешними сервиса
 - `backend/api/tariffs.py` — роутеры тарифов
 - `backend/services/house.py` — бизнес-логика домов
 - `backend/services/user.py` — бизнес-логика пользователей
+- `backend/tests/test_houses.py` — тесты домов
+- `backend/tests/test_users.py` — тесты пользователей
 
 ### Документы
 
@@ -200,8 +308,36 @@ Backend также интегрируется с внешними сервиса
 - [ ] Настройка Alembic для миграций
 - [ ] Создание начальной миграции
 - [ ] Реализация репозиториев/DAO
-- [ ] Обновление docker-compose.yaml с PostgreSQL
+- [ ] Обновление `docker-compose.yaml` с PostgreSQL
 - [ ] Перенос существующих данных (если есть)
+- [ ] Обновление `.env.example` — добавить переменные БД
+- [ ] Обновление `Makefile` — добавить `make migrate`, `make migrate-create`
+
+### Definition of Done (самопроверка агента)
+
+- [ ] БД поднимается: `docker compose up postgres`
+- [ ] Миграции применяются: `make migrate`
+- [ ] API работает с БД — данные сохраняются между перезапусками
+- [ ] Тесты проходят с тестовой БД
+
+### Проверка пользователем
+
+```bash
+# Запуск инфраструктуры
+docker compose up -d postgres
+
+# Применение миграций
+make migrate
+
+# Проверка: создать бронирование, перезапустить сервер, проверить что данные на месте
+curl -X POST http://localhost:8000/api/v1/bookings \
+  -H "Content-Type: application/json" \
+  -d '{"house_id": 1, "check_in": "2024-06-01", "check_out": "2024-06-03", "guests": [{"type": "adult", "count": 2}]}'
+
+# Перезапуск сервера и проверка
+make run-backend
+curl http://localhost:8000/api/v1/bookings
+```
 
 ### Артефакты
 
@@ -213,6 +349,8 @@ Backend также интегрируется с внешними сервиса
 - `backend/repositories/` — слой доступа к данным
 - `alembic/` — миграции
 - `docker-compose.yaml` — обновлённый с postgres
+- `.env.example` — обновлённый
+- `Makefile` — обновлённый
 
 ### Документы
 
@@ -234,6 +372,30 @@ Backend также интегрируется с внешними сервиса
 - [ ] Удаление in-memory хранения из бота
 - [ ] Обработка ошибок API в боте
 - [ ] Тестирование end-to-end: бот -> backend -> БД
+- [ ] Актуализация `docs/integrations.md` — добавить схему взаимодействия бота с backend
+- [ ] Обновление `README.md` — инструкции по запуску обоих сервисов
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Бот запускается и подключается к backend
+- [ ] Сообщения от бота проходят через backend API
+- [ ] Данные сохраняются в БД (не в памяти бота)
+- [ ] End-to-end тест проходит: сообщение в бот -> backend -> БД -> ответ
+
+### Проверка пользователем
+
+```bash
+# Запуск всей системы
+make run-backend  # в одном терминале
+make run          # бот в другом терминале
+
+# Проверка: отправить сообщение боту в Telegram
+# Ожидаемый результат: бот отвечает, данные сохраняются в БД
+
+# Проверка через API
+curl http://localhost:8000/api/v1/bookings
+# Должны отображаться бронирования, созданные через бота
+```
 
 ### Артефакты
 
@@ -241,6 +403,8 @@ Backend также интегрируется с внешними сервиса
 - Обновлённые `bot/handlers/message.py`
 - Удалённые `bot/services/booking.py` (in-memory логика)
 - Обновлённые `bot/models/booking.py` (если нужны)
+- `docs/integrations.md` — обновлённый
+- `README.md` — обновлённый
 
 ### Документы
 
@@ -260,16 +424,43 @@ Backend также интегрируется с внешними сервиса
 - [ ] Актуализация `docs/vision.md` — отразить выделенный backend
 - [ ] Актуализация `docs/data-model.md` — точные поля моделей
 - [ ] Актуализация `docs/integrations.md` — backend как точка интеграции
-- [ ] Фиксация соглашений: форматы запросов, коды ошибок
+- [ ] Актуализация `docs/plan.md` — обновить статус этапа 1
+- [ ] Фиксация соглашений в `.qoder/rules/conventions.md`: форматы запросов, коды ошибок
 - [ ] Фиксация версионирования API (v1)
-- [ ] Обновление README с командами запуска
-- [ ] Создание Makefile команд: `make run-backend`, `make migrate`
+- [ ] Обновление `README.md` с командами запуска backend
+- [ ] Проверка `Makefile` — все команды актуальны
+- [ ] Проверка `.env.example` — все переменные описаны
+
+### Definition of Done (самопроверка агента)
+
+- [ ] Все документы отражают текущее состояние системы
+- [ ] README содержит инструкции по запуску backend и бота
+- [ ] Conventions содержат правила для backend-разработки
+- [ ] Новый участник может развернуть систему по README
+
+### Проверка пользователем
+
+```bash
+# Проверка полноты документации
+cat README.md | grep -E "(run-backend|migrate|docker)"
+
+# Проверка env переменных
+cat .env.example
+
+# Проверка make-команд
+make help  # или просмотр Makefile
+```
 
 ### Артефакты
 
-- Обновлённые `docs/vision.md`, `docs/data-model.md`, `docs/integrations.md`
-- Обновлённый `README.md`
-- Обновлённый `Makefile`
+- `docs/vision.md` — обновлённый
+- `docs/data-model.md` — обновлённый
+- `docs/integrations.md` — обновлённый
+- `docs/plan.md` — обновлённый
+- `.qoder/rules/conventions.md` — обновлённый
+- `README.md` — обновлённый
+- `Makefile` — проверенный
+- `.env.example` — проверенный
 
 ### Документы
 

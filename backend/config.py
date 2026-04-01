@@ -4,7 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Backend configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="BACKEND_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="BACKEND_",
+        env_file=".env",
+        extra="ignore",
+    )
 
     # Server
     host: str = "0.0.0.0"

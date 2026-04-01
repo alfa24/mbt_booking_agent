@@ -7,6 +7,15 @@ from fastapi.responses import JSONResponse
 
 from backend.config import settings
 from backend.api import api_router
+from backend.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingException,
+    BookingNotFoundError,
+    BookingPermissionError,
+    DateConflictError,
+    InvalidBookingStatusError,
+)
+from backend.schemas.common import ErrorResponse
 
 # Configure logging
 logging.basicConfig(
@@ -52,16 +61,72 @@ async def health_check():
     return {"status": "ok"}
 
 
-# Global exception handlers
+# Booking domain exception handlers
+@app.exception_handler(BookingNotFoundError)
+async def booking_not_found_handler(request: Request, exc: BookingNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content=ErrorResponse(
+            error="not_found",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(DateConflictError)
+async def date_conflict_handler(request: Request, exc: DateConflictError):
+    return JSONResponse(
+        status_code=400,
+        content=ErrorResponse(
+            error="date_conflict",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(BookingPermissionError)
+async def permission_error_handler(request: Request, exc: BookingPermissionError):
+    return JSONResponse(
+        status_code=403,
+        content=ErrorResponse(
+            error="forbidden",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(InvalidBookingStatusError)
+async def invalid_status_handler(request: Request, exc: InvalidBookingStatusError):
+    return JSONResponse(
+        status_code=400,
+        content=ErrorResponse(
+            error="invalid_status",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(BookingAlreadyCancelledError)
+async def already_cancelled_handler(request: Request, exc: BookingAlreadyCancelledError):
+    return JSONResponse(
+        status_code=400,
+        content=ErrorResponse(
+            error="already_cancelled",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+# Global exception handler (must be last)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception occurred")
     return JSONResponse(
         status_code=500,
-        content={
-            "error": "internal_error",
-            "message": "An unexpected error occurred",
-        },
+        content=ErrorResponse(
+            error="internal_error",
+            message="An unexpected error occurred",
+        ).model_dump(),
     )
 
 

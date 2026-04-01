@@ -210,7 +210,7 @@ open http://localhost:8000/docs
 
 ---
 
-## Задача 04: Реализация API бронирований 📋
+## Задача 04: Реализация API бронирований ✅
 
 ### Цель
 
@@ -218,41 +218,45 @@ open http://localhost:8000/docs
 
 ### Состав работ
 
-- [ ] `GET /api/v1/bookings` — список бронирований (фильтры: user_id, house_id, status)
-- [ ] `GET /api/v1/bookings/{id}` — получение бронирования
-- [ ] `POST /api/v1/bookings` — создание бронирования
-- [ ] `PATCH /api/v1/bookings/{id}` — обновление бронирования
-- [ ] `DELETE /api/v1/bookings/{id}` — отмена бронирования
-- [ ] Валидация дат (check_in < check_out)
-- [ ] Проверка пересечения дат для одного дома
-- [ ] Расчёт суммы на основе тарифов и состава гостей
-- [ ] Базовые API-тесты для всех endpoints (pytest + httpx)
+- [x] `GET /api/v1/bookings` — список бронирований (фильтры: user_id, house_id, status)
+- [x] `GET /api/v1/bookings/{id}` — получение бронирования
+- [x] `POST /api/v1/bookings` — создание бронирования
+- [x] `PATCH /api/v1/bookings/{id}` — обновление бронирования
+- [x] `DELETE /api/v1/bookings/{id}` — отмена бронирования
+- [x] Валидация дат (check_in < check_out)
+- [x] Проверка пересечения дат для одного дома
+- [x] Расчёт суммы на основе тарифов и состава гостей
+- [x] Базовые API-тесты для всех endpoints (pytest + httpx)
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] Все endpoints возвращают корректные HTTP-коды (200, 201, 400, 404, 422)
-- [ ] Валидация работает — невалидные данные отклоняются
-- [ ] Тесты проходят: `pytest backend/tests/`
-- [ ] Покрытие бронирований > 80%
+- [x] Все endpoints возвращают корректные HTTP-коды (200, 201, 400, 404, 422)
+- [x] Валидация работает — невалидные данные отклоняются
+- [x] Тесты проходят: `docker compose exec backend uv run pytest backend/tests/test_bookings.py -v`
+- [x] Покрытие бронирований > 80% (24 теста)
 
 ### Проверка пользователем
 
 ```bash
-# Запуск тестов
-pytest backend/tests/test_bookings.py -v
+# Запуск backend в Docker
+docker compose up -d backend
 
-# Ручная проверка через Swagger
-curl -X POST http://localhost:8000/api/v1/bookings \
+# Запуск тестов в контейнере
+docker compose exec backend uv run pytest backend/tests/test_bookings.py -v
+
+# Ручная проверка через Swagger (http://localhost:8001/docs)
+curl -X POST http://localhost:8001/api/v1/bookings \
   -H "Content-Type: application/json" \
-  -d '{"house_id": 1, "check_in": "2024-06-01", "check_out": "2024-06-03", "guests": [{"type": "adult", "count": 2}]}'
+  -d '{"house_id": 1, "check_in": "2024-06-01", "check_out": "2024-06-03", "guests": [{"tariff_id": 2, "count": 2}]}'
 ```
 
 ### Артефакты
 
 - `backend/api/bookings.py` — роутеры бронирований
 - `backend/services/booking.py` — бизнес-логика
-- `backend/models/booking.py` — SQLAlchemy модель (или in-memory заглушка)
-- `backend/tests/test_bookings.py` — тесты
+- `backend/repositories/booking.py` — in-memory репозиторий
+- `backend/exceptions.py` — кастомные исключения
+- `backend/tests/test_bookings.py` — тесты (24 шт.)
 
 ### Документы
 

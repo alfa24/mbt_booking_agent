@@ -1,29 +1,26 @@
-"""In-memory tariff repository for MVP."""
+"""SQLAlchemy tariff repository."""
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.tariff import Tariff
 from backend.schemas.tariff import TariffResponse
 
 
 class TariffRepository:
-    """In-memory repository for tariffs.
+    """SQLAlchemy repository for tariffs."""
 
-    Uses dict for storage with auto-increment ID.
-    To be replaced with SQLAlchemy repository in task-06.
-    """
+    def __init__(self, session: AsyncSession):
+        """Initialize repository with database session.
 
-    def __init__(self):
-        """Initialize repository with empty storage."""
-        self._storage: Dict[int, TariffResponse] = {}
-        self._counter: int = 0
+        Args:
+            session: SQLAlchemy async session
+        """
+        self._session = session
 
-    def _get_next_id(self) -> int:
-        """Generate next tariff ID."""
-        self._counter += 1
-        return self._counter
-
-    def create(
+    async def create(
         self,
         name: str,
         amount: int,
@@ -37,17 +34,13 @@ class TariffRepository:
         Returns:
             Created tariff response
         """
-        tariff_id = self._get_next_id()
-        tariff = TariffResponse(
-            id=tariff_id,
-            name=name,
-            amount=amount,
-            created_at=datetime.now(timezone.utc),
-        )
-        self._storage[tariff_id] = tariff
-        return tariff
+        tariff = Tariff(name=name, amount=amount)
+        self._session.add(tariff)
+        await self._session.flush()
+        await self._session.refresh(tariff)
+        return TariffResponse.model_validate(tariff)
 
-    def get(self, tariff_id: int) -> Optional[TariffResponse]:
+    async def get(self, tariff_id: int) -> Optional[TariffResponse]:
         """Get tariff by ID.
 
         Args:
@@ -56,9 +49,13 @@ class TariffRepository:
         Returns:
             Tariff if found, None otherwise
         """
-        return self._storage.get(tariff_id)
+        result = await self._session.execute(
+            select(Tariff).where(Tariff.id == tariff_id)
+        )
+        tariff = result.scalar_one_or_none()
+        return TariffResponse.model_validate(tariff) if tariff else None
 
-    def get_all(
+    async def get_all(
         self,
         limit: int = 20,
         offset: int = 0,
@@ -74,27 +71,34 @@ class TariffRepository:
         Returns:
             Tuple of (tariffs list, total count)
         """
-        tariffs = list(self._storage.values())
+        query = select(Tariff)
+
+        # Get total count
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar() or 0
 
         # Apply sorting
         if sort:
             reverse = sort.startswith("-")
             sort_field = sort[1:] if reverse else sort
-            if sort_field in ("name", "amount", "created_at", "id"):
-                tariffs = sorted(
-                    tariffs,
-                    key=lambda t: getattr(t, sort_field),
-                    reverse=reverse,
+            if hasattr(Tariff, sort_field):
+                order = (
+                    getattr(Tariff, sort_field).desc()
+                    if reverse
+                    else getattr(Tariff, sort_field)
                 )
-
-        total = len(tariffs)
+                query = query.order_by(order)
 
         # Apply pagination
-        tariffs = tariffs[offset : offset + limit]
+        query = query.offset(offset).limit(limit)
 
-        return tariffs, total
+        result = await self._session.execute(query)
+        tariffs = result.scalars().all()
+        return [TariffResponse.model_validate(tariff) for tariff in tariffs], total
 
-    def update(
+    async def update(
         self,
         tariff_id: int,
         name: Optional[str] = None,
@@ -110,22 +114,23 @@ class TariffRepository:
         Returns:
             Updated tariff if found, None otherwise
         """
-        tariff = self._storage.get(tariff_id)
+        result = await self._session.execute(
+            select(Tariff).where(Tariff.id == tariff_id)
+        )
+        tariff = result.scalar_one_or_none()
         if not tariff:
             return None
 
-        # Create updated tariff with new values
-        updated_data = tariff.model_dump()
         if name is not None:
-            updated_data["name"] = name
+            tariff.name = name
         if amount is not None:
-            updated_data["amount"] = amount
+            tariff.amount = amount
 
-        updated_tariff = TariffResponse(**updated_data)
-        self._storage[tariff_id] = updated_tariff
-        return updated_tariff
+        await self._session.flush()
+        await self._session.refresh(tariff)
+        return TariffResponse.model_validate(tariff)
 
-    def delete(self, tariff_id: int) -> bool:
+    async def delete(self, tariff_id: int) -> bool:
         """Delete tariff by ID.
 
         Args:
@@ -134,12 +139,12 @@ class TariffRepository:
         Returns:
             True if deleted, False if not found
         """
-        if tariff_id in self._storage:
-            del self._storage[tariff_id]
-            return True
-        return False
+        result = await self._session.execute(
+            select(Tariff).where(Tariff.id == tariff_id)
+        )
+        tariff = result.scalar_one_or_none()
+        if not tariff:
+            return False
 
-    def clear(self) -> None:
-        """Clear all tariffs (for testing)."""
-        self._storage.clear()
-        self._counter = 0
+        await self._session.delete(tariff)
+        return True

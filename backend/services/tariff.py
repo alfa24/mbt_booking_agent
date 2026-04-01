@@ -3,7 +3,9 @@
 from typing import List
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.database import get_db
 from backend.exceptions import TariffNotFoundError
 from backend.repositories.tariff import TariffRepository
 from backend.schemas.tariff import (
@@ -13,15 +15,18 @@ from backend.schemas.tariff import (
 )
 
 
-def get_tariff_repository() -> TariffRepository:
+async def get_tariff_repository(
+    db: AsyncSession = Depends(get_db),
+) -> TariffRepository:
     """Dependency provider for tariff repository.
 
-    Returns singleton instance of in-memory repository.
-    To be replaced with database session in task-06.
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        TariffRepository instance with database session
     """
-    if not hasattr(get_tariff_repository, "_instance"):
-        get_tariff_repository._instance = TariffRepository()
-    return get_tariff_repository._instance
+    return TariffRepository(db)
 
 
 class TariffService:
@@ -41,7 +46,7 @@ class TariffService:
         """
         self._repo = repository
 
-    def create_tariff(self, request: CreateTariffRequest) -> TariffResponse:
+    async def create_tariff(self, request: CreateTariffRequest) -> TariffResponse:
         """Create a new tariff.
 
         Args:
@@ -50,12 +55,12 @@ class TariffService:
         Returns:
             Created tariff
         """
-        return self._repo.create(
+        return await self._repo.create(
             name=request.name,
             amount=request.amount,
         )
 
-    def get_tariff(self, tariff_id: int) -> TariffResponse:
+    async def get_tariff(self, tariff_id: int) -> TariffResponse:
         """Get tariff by ID.
 
         Args:
@@ -67,12 +72,12 @@ class TariffService:
         Raises:
             TariffNotFoundError: If tariff not found
         """
-        tariff = self._repo.get(tariff_id)
+        tariff = await self._repo.get(tariff_id)
         if not tariff:
             raise TariffNotFoundError(tariff_id)
         return tariff
 
-    def list_tariffs(
+    async def list_tariffs(
         self,
         limit: int = 20,
         offset: int = 0,
@@ -88,13 +93,13 @@ class TariffService:
         Returns:
             Tuple of (tariffs list, total count)
         """
-        return self._repo.get_all(
+        return await self._repo.get_all(
             limit=limit,
             offset=offset,
             sort=sort,
         )
 
-    def update_tariff(
+    async def update_tariff(
         self,
         tariff_id: int,
         request: UpdateTariffRequest,
@@ -111,18 +116,18 @@ class TariffService:
         Raises:
             TariffNotFoundError: If tariff not found
         """
-        existing = self._repo.get(tariff_id)
+        existing = await self._repo.get(tariff_id)
         if not existing:
             raise TariffNotFoundError(tariff_id)
 
-        updated = self._repo.update(
+        updated = await self._repo.update(
             tariff_id=tariff_id,
             name=request.name,
             amount=request.amount,
         )
         return updated
 
-    def delete_tariff(self, tariff_id: int) -> None:
+    async def delete_tariff(self, tariff_id: int) -> None:
         """Delete a tariff.
 
         Args:
@@ -131,8 +136,8 @@ class TariffService:
         Raises:
             TariffNotFoundError: If tariff not found
         """
-        existing = self._repo.get(tariff_id)
+        existing = await self._repo.get(tariff_id)
         if not existing:
             raise TariffNotFoundError(tariff_id)
 
-        self._repo.delete(tariff_id)
+        await self._repo.delete(tariff_id)

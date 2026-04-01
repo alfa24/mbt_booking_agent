@@ -43,7 +43,7 @@ async def list_houses(
     Returns:
         Paginated list of houses
     """
-    houses, total = service.list_houses(filters)
+    houses, total = await service.list_houses(filters)
     return PaginatedResponse(
         items=houses,
         total=total,
@@ -81,7 +81,7 @@ async def get_house(
     Raises:
         HTTPException: 404 if house not found
     """
-    return service.get_house(house_id)
+    return await service.get_house(house_id)
 
 
 @houses_router.post(
@@ -116,7 +116,7 @@ async def create_house(
     """
     # TODO: Replace with actual auth when implementing authentication
     owner_id = 1
-    return service.create_house(owner_id, request)
+    return await service.create_house(owner_id, request)
 
 
 @houses_router.put(
@@ -154,7 +154,7 @@ async def replace_house(
     Raises:
         HTTPException: 404 if house not found, 422 if validation fails
     """
-    return service.replace_house(house_id, request)
+    return await service.replace_house(house_id, request)
 
 
 @houses_router.patch(
@@ -194,7 +194,7 @@ async def update_house(
     Raises:
         HTTPException: 404 if not found, 422 if validation fails
     """
-    return service.update_house(house_id, request)
+    return await service.update_house(house_id, request)
 
 
 @houses_router.delete(
@@ -223,7 +223,7 @@ async def delete_house(
     Raises:
         HTTPException: 404 if house not found
     """
-    service.delete_house(house_id)
+    await service.delete_house(house_id)
 
 
 @houses_router.get(
@@ -262,4 +262,4 @@ async def get_house_calendar(
     Raises:
         HTTPException: 404 if house not found
     """
-    return service.get_house_calendar(house_id, date_from, date_to)
+    return await service.get_house_calendar(house_id, date_from, date_to)

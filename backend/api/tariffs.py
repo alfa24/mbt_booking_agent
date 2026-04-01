@@ -43,7 +43,7 @@ async def list_tariffs(
     Returns:
         Paginated list of tariffs
     """
-    tariffs, total = service.list_tariffs(limit=limit, offset=offset, sort=sort)
+    tariffs, total = await service.list_tariffs(limit=limit, offset=offset, sort=sort)
     return PaginatedResponse(
         items=tariffs,
         total=total,
@@ -81,7 +81,7 @@ async def get_tariff(
     Raises:
         HTTPException: 404 if tariff not found
     """
-    return service.get_tariff(tariff_id)
+    return await service.get_tariff(tariff_id)
 
 
 @tariffs_router.post(
@@ -114,7 +114,7 @@ async def create_tariff(
     Raises:
         HTTPException: 422 if validation fails
     """
-    return service.create_tariff(request)
+    return await service.create_tariff(request)
 
 
 @tariffs_router.patch(
@@ -154,7 +154,7 @@ async def update_tariff(
     Raises:
         HTTPException: 404 if not found, 422 if validation fails
     """
-    return service.update_tariff(tariff_id, request)
+    return await service.update_tariff(tariff_id, request)
 
 
 @tariffs_router.delete(
@@ -183,4 +183,4 @@ async def delete_tariff(
     Raises:
         HTTPException: 404 if tariff not found
     """
-    service.delete_tariff(tariff_id)
+    await service.delete_tariff(tariff_id)

@@ -1,34 +1,32 @@
-"""In-memory booking repository for MVP."""
+"""SQLAlchemy booking repository."""
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import date
+from typing import List, Optional
 
-from backend.schemas.booking import BookingResponse, BookingStatus
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.booking import Booking, BookingStatus
+from backend.schemas.booking import BookingResponse
 
 
 class BookingRepository:
-    """In-memory repository for bookings.
+    """SQLAlchemy repository for bookings."""
 
-    Uses dict for storage with auto-increment ID.
-    To be replaced with SQLAlchemy repository in task-06.
-    """
+    def __init__(self, session: AsyncSession):
+        """Initialize repository with database session.
 
-    def __init__(self):
-        """Initialize repository with empty storage."""
-        self._storage: Dict[int, BookingResponse] = {}
-        self._counter: int = 0
+        Args:
+            session: SQLAlchemy async session
+        """
+        self._session = session
 
-    def _get_next_id(self) -> int:
-        """Generate next booking ID."""
-        self._counter += 1
-        return self._counter
-
-    def create(
+    async def create(
         self,
         house_id: int,
         tenant_id: int,
-        check_in: datetime,
-        check_out: datetime,
+        check_in: date,
+        check_out: date,
         guests_planned: List[dict],
         total_amount: Optional[int] = None,
     ) -> BookingResponse:
@@ -45,23 +43,21 @@ class BookingRepository:
         Returns:
             Created booking response
         """
-        booking_id = self._get_next_id()
-        booking = BookingResponse(
-            id=booking_id,
+        booking = Booking(
             house_id=house_id,
             tenant_id=tenant_id,
             check_in=check_in,
             check_out=check_out,
             guests_planned=guests_planned,
-            guests_actual=None,
             total_amount=total_amount,
             status=BookingStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
         )
-        self._storage[booking_id] = booking
-        return booking
+        self._session.add(booking)
+        await self._session.flush()
+        await self._session.refresh(booking)
+        return BookingResponse.model_validate(booking)
 
-    def get(self, booking_id: int) -> Optional[BookingResponse]:
+    async def get(self, booking_id: int) -> Optional[BookingResponse]:
         """Get booking by ID.
 
         Args:
@@ -70,9 +66,13 @@ class BookingRepository:
         Returns:
             Booking if found, None otherwise
         """
-        return self._storage.get(booking_id)
+        result = await self._session.execute(
+            select(Booking).where(Booking.id == booking_id)
+        )
+        booking = result.scalar_one_or_none()
+        return BookingResponse.model_validate(booking) if booking else None
 
-    def get_all(
+    async def get_all(
         self,
         user_id: Optional[int] = None,
         house_id: Optional[int] = None,
@@ -94,39 +94,46 @@ class BookingRepository:
         Returns:
             Tuple of (filtered bookings list, total count)
         """
-        bookings = list(self._storage.values())
+        query = select(Booking)
 
         # Apply filters
         if user_id is not None:
-            bookings = [b for b in bookings if b.tenant_id == user_id]
+            query = query.where(Booking.tenant_id == user_id)
         if house_id is not None:
-            bookings = [b for b in bookings if b.house_id == house_id]
+            query = query.where(Booking.house_id == house_id)
         if status is not None:
-            bookings = [b for b in bookings if b.status == status]
+            query = query.where(Booking.status == status)
+
+        # Get total count
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar() or 0
 
         # Apply sorting
         if sort:
             reverse = sort.startswith("-")
             sort_field = sort[1:] if reverse else sort
-            if sort_field in ("check_in", "check_out", "created_at", "id"):
-                bookings = sorted(
-                    bookings,
-                    key=lambda b: getattr(b, sort_field),
-                    reverse=reverse,
+            if hasattr(Booking, sort_field):
+                order = (
+                    getattr(Booking, sort_field).desc()
+                    if reverse
+                    else getattr(Booking, sort_field)
                 )
-
-        total = len(bookings)
+                query = query.order_by(order)
 
         # Apply pagination
-        bookings = bookings[offset : offset + limit]
+        query = query.offset(offset).limit(limit)
 
-        return bookings, total
+        result = await self._session.execute(query)
+        bookings = result.scalars().all()
+        return [BookingResponse.model_validate(b) for b in bookings], total
 
-    def update(
+    async def update(
         self,
         booking_id: int,
-        check_in: Optional[datetime] = None,
-        check_out: Optional[datetime] = None,
+        check_in: Optional[date] = None,
+        check_out: Optional[date] = None,
         guests_planned: Optional[List[dict]] = None,
         guests_actual: Optional[List[dict]] = None,
         total_amount: Optional[int] = None,
@@ -146,30 +153,31 @@ class BookingRepository:
         Returns:
             Updated booking if found, None otherwise
         """
-        booking = self._storage.get(booking_id)
+        result = await self._session.execute(
+            select(Booking).where(Booking.id == booking_id)
+        )
+        booking = result.scalar_one_or_none()
         if not booking:
             return None
 
-        # Create updated booking with new values
-        updated_data = booking.model_dump()
         if check_in is not None:
-            updated_data["check_in"] = check_in
+            booking.check_in = check_in
         if check_out is not None:
-            updated_data["check_out"] = check_out
+            booking.check_out = check_out
         if guests_planned is not None:
-            updated_data["guests_planned"] = guests_planned
+            booking.guests_planned = guests_planned
         if guests_actual is not None:
-            updated_data["guests_actual"] = guests_actual
+            booking.guests_actual = guests_actual
         if total_amount is not None:
-            updated_data["total_amount"] = total_amount
+            booking.total_amount = total_amount
         if status is not None:
-            updated_data["status"] = status
+            booking.status = status
 
-        updated_booking = BookingResponse(**updated_data)
-        self._storage[booking_id] = updated_booking
-        return updated_booking
+        await self._session.flush()
+        await self._session.refresh(booking)
+        return BookingResponse.model_validate(booking)
 
-    def delete(self, booking_id: int) -> bool:
+    async def delete(self, booking_id: int) -> bool:
         """Delete booking by ID.
 
         Args:
@@ -178,12 +186,17 @@ class BookingRepository:
         Returns:
             True if deleted, False if not found
         """
-        if booking_id in self._storage:
-            del self._storage[booking_id]
-            return True
-        return False
+        result = await self._session.execute(
+            select(Booking).where(Booking.id == booking_id)
+        )
+        booking = result.scalar_one_or_none()
+        if not booking:
+            return False
 
-    def get_bookings_for_house(
+        await self._session.delete(booking)
+        return True
+
+    async def get_bookings_for_house(
         self,
         house_id: int,
         exclude_booking_id: Optional[int] = None,
@@ -197,15 +210,14 @@ class BookingRepository:
         Returns:
             List of bookings for the house
         """
-        bookings = [
-            b for b in self._storage.values()
-            if b.house_id == house_id and b.status != BookingStatus.CANCELLED
-        ]
-        if exclude_booking_id is not None:
-            bookings = [b for b in bookings if b.id != exclude_booking_id]
-        return bookings
+        query = select(Booking).where(
+            Booking.house_id == house_id,
+            Booking.status != BookingStatus.CANCELLED,
+        )
 
-    def clear(self) -> None:
-        """Clear all bookings (for testing)."""
-        self._storage.clear()
-        self._counter = 0
+        if exclude_booking_id is not None:
+            query = query.where(Booking.id != exclude_booking_id)
+
+        result = await self._session.execute(query)
+        bookings = result.scalars().all()
+        return [BookingResponse.model_validate(b) for b in bookings]

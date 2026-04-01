@@ -1,32 +1,15 @@
 """Tests for booking API endpoints."""
 
 import pytest
-from fastapi.testclient import TestClient
-
-from backend.main import app
-from backend.repositories.booking import BookingRepository
-from backend.schemas.booking import BookingStatus
-
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clear_repository():
-    """Clear repository before each test."""
-    # Get repository instance and clear it
-    from backend.services.booking import get_booking_repository
-
-    repo = get_booking_repository()
-    repo.clear()
-    yield
 
 
 class TestCreateBooking:
     """Tests for POST /api/v1/bookings"""
 
-    def test_create_booking_success(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_success(self, client):
         """Test creating a booking with valid data."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -46,9 +29,10 @@ class TestCreateBooking:
         assert data["total_amount"] == 500  # 2 adults * 250
         assert len(data["guests_planned"]) == 1
 
-    def test_create_booking_invalid_dates(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_invalid_dates(self, client):
         """Test creating a booking with check_in >= check_out."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -59,9 +43,10 @@ class TestCreateBooking:
         )
         assert response.status_code == 422
 
-    def test_create_booking_same_date(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_same_date(self, client):
         """Test creating a booking with check_in == check_out."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -72,9 +57,10 @@ class TestCreateBooking:
         )
         assert response.status_code == 422
 
-    def test_create_booking_missing_guests(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_missing_guests(self, client):
         """Test creating a booking without guests."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -84,9 +70,10 @@ class TestCreateBooking:
         )
         assert response.status_code == 422
 
-    def test_create_booking_empty_guests(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_empty_guests(self, client):
         """Test creating a booking with empty guests list."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -97,10 +84,11 @@ class TestCreateBooking:
         )
         assert response.status_code == 422
 
-    def test_create_booking_date_conflict(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_date_conflict(self, client):
         """Test creating a booking with conflicting dates."""
         # Create first booking
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -111,7 +99,7 @@ class TestCreateBooking:
         )
 
         # Try to create overlapping booking
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -123,10 +111,11 @@ class TestCreateBooking:
         assert response.status_code == 400
         assert "conflict" in response.json()["error"]
 
-    def test_create_booking_different_house_no_conflict(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_different_house_no_conflict(self, client):
         """Test that bookings for different houses don't conflict."""
         # Create booking for house 1
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -137,7 +126,7 @@ class TestCreateBooking:
         )
 
         # Create booking for house 2 with overlapping dates
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 2,
@@ -148,9 +137,10 @@ class TestCreateBooking:
         )
         assert response.status_code == 201
 
-    def test_create_booking_amount_calculation(self):
+    @pytest.mark.asyncio
+    async def test_create_booking_amount_calculation(self, client):
         """Test amount calculation for different guest types."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -171,10 +161,11 @@ class TestCreateBooking:
 class TestGetBooking:
     """Tests for GET /api/v1/bookings/{id}"""
 
-    def test_get_booking_success(self):
+    @pytest.mark.asyncio
+    async def test_get_booking_success(self, client):
         """Test getting an existing booking."""
         # Create booking first
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -186,15 +177,16 @@ class TestGetBooking:
         booking_id = create_response.json()["id"]
 
         # Get the booking
-        response = client.get(f"/api/v1/bookings/{booking_id}")
+        response = await client.get(f"/api/v1/bookings/{booking_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == booking_id
         assert data["house_id"] == 1
 
-    def test_get_booking_not_found(self):
+    @pytest.mark.asyncio
+    async def test_get_booking_not_found(self, client):
         """Test getting a non-existent booking."""
-        response = client.get("/api/v1/bookings/999")
+        response = await client.get("/api/v1/bookings/999")
         assert response.status_code == 404
         assert response.json()["error"] == "not_found"
 
@@ -202,18 +194,20 @@ class TestGetBooking:
 class TestListBookings:
     """Tests for GET /api/v1/bookings"""
 
-    def test_list_bookings_empty(self):
+    @pytest.mark.asyncio
+    async def test_list_bookings_empty(self, client):
         """Test listing bookings when none exist."""
-        response = client.get("/api/v1/bookings")
+        response = await client.get("/api/v1/bookings")
         assert response.status_code == 200
         data = response.json()
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_list_bookings_with_data(self):
+    @pytest.mark.asyncio
+    async def test_list_bookings_with_data(self, client):
         """Test listing multiple bookings."""
         # Create two bookings
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -222,7 +216,7 @@ class TestListBookings:
                 "guests": [{"tariff_id": 2, "count": 2}],
             },
         )
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 2,
@@ -232,16 +226,17 @@ class TestListBookings:
             },
         )
 
-        response = client.get("/api/v1/bookings")
+        response = await client.get("/api/v1/bookings")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 2
         assert data["total"] == 2
 
-    def test_list_bookings_filter_by_house(self):
+    @pytest.mark.asyncio
+    async def test_list_bookings_filter_by_house(self, client):
         """Test filtering bookings by house_id."""
         # Create bookings for different houses
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -250,7 +245,7 @@ class TestListBookings:
                 "guests": [{"tariff_id": 2, "count": 2}],
             },
         )
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 2,
@@ -260,16 +255,17 @@ class TestListBookings:
             },
         )
 
-        response = client.get("/api/v1/bookings?house_id=1")
+        response = await client.get("/api/v1/bookings?house_id=1")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
         assert data["items"][0]["house_id"] == 1
 
-    def test_list_bookings_filter_by_status(self):
+    @pytest.mark.asyncio
+    async def test_list_bookings_filter_by_status(self, client):
         """Test filtering bookings by status."""
         # Create and cancel a booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -279,10 +275,10 @@ class TestListBookings:
             },
         )
         booking_id = create_response.json()["id"]
-        client.delete(f"/api/v1/bookings/{booking_id}")
+        await client.delete(f"/api/v1/bookings/{booking_id}")
 
         # Create another booking (pending)
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 2,
@@ -292,17 +288,18 @@ class TestListBookings:
             },
         )
 
-        response = client.get("/api/v1/bookings?status=cancelled")
+        response = await client.get("/api/v1/bookings?status=cancelled")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
         assert data["items"][0]["status"] == "cancelled"
 
-    def test_list_bookings_pagination(self):
+    @pytest.mark.asyncio
+    async def test_list_bookings_pagination(self, client):
         """Test pagination with limit and offset."""
         # Create multiple bookings
         for i in range(5):
-            client.post(
+            await client.post(
                 "/api/v1/bookings",
                 json={
                     "house_id": i + 1,
@@ -312,7 +309,7 @@ class TestListBookings:
                 },
             )
 
-        response = client.get("/api/v1/bookings?limit=2&offset=1")
+        response = await client.get("/api/v1/bookings?limit=2&offset=1")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 2
@@ -324,10 +321,11 @@ class TestListBookings:
 class TestUpdateBooking:
     """Tests for PATCH /api/v1/bookings/{id}"""
 
-    def test_update_booking_dates(self):
+    @pytest.mark.asyncio
+    async def test_update_booking_dates(self, client):
         """Test updating booking dates."""
         # Create booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -339,7 +337,7 @@ class TestUpdateBooking:
         booking_id = create_response.json()["id"]
 
         # Update dates
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/bookings/{booking_id}",
             json={
                 "check_in": "2024-06-05",
@@ -351,10 +349,11 @@ class TestUpdateBooking:
         assert data["check_in"] == "2024-06-05"
         assert data["check_out"] == "2024-06-07"
 
-    def test_update_booking_guests(self):
+    @pytest.mark.asyncio
+    async def test_update_booking_guests(self, client):
         """Test updating guest composition."""
         # Create booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -366,7 +365,7 @@ class TestUpdateBooking:
         booking_id = create_response.json()["id"]
 
         # Update guests (changes amount from 500 to 750)
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/bookings/{booking_id}",
             json={
                 "guests": [{"tariff_id": 2, "count": 3}],
@@ -378,18 +377,20 @@ class TestUpdateBooking:
         assert len(data["guests_planned"]) == 1
         assert data["guests_planned"][0]["count"] == 3
 
-    def test_update_booking_not_found(self):
+    @pytest.mark.asyncio
+    async def test_update_booking_not_found(self, client):
         """Test updating a non-existent booking."""
-        response = client.patch(
+        response = await client.patch(
             "/api/v1/bookings/999",
             json={"check_in": "2024-06-05"},
         )
         assert response.status_code == 404
 
-    def test_update_booking_invalid_dates(self):
+    @pytest.mark.asyncio
+    async def test_update_booking_invalid_dates(self, client):
         """Test updating with invalid dates."""
         # Create booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -401,7 +402,7 @@ class TestUpdateBooking:
         booking_id = create_response.json()["id"]
 
         # Try to update with invalid dates
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/bookings/{booking_id}",
             json={
                 "check_in": "2024-06-05",
@@ -410,10 +411,11 @@ class TestUpdateBooking:
         )
         assert response.status_code == 422
 
-    def test_update_booking_date_conflict(self):
+    @pytest.mark.asyncio
+    async def test_update_booking_date_conflict(self, client):
         """Test updating with conflicting dates."""
         # Create first booking
-        client.post(
+        await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -424,7 +426,7 @@ class TestUpdateBooking:
         )
 
         # Create second booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -436,7 +438,7 @@ class TestUpdateBooking:
         booking_id = create_response.json()["id"]
 
         # Try to update second booking to overlap with first
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/bookings/{booking_id}",
             json={
                 "check_in": "2024-06-12",
@@ -449,10 +451,11 @@ class TestUpdateBooking:
 class TestCancelBooking:
     """Tests for DELETE /api/v1/bookings/{id}"""
 
-    def test_cancel_booking_success(self):
+    @pytest.mark.asyncio
+    async def test_cancel_booking_success(self, client):
         """Test cancelling a booking."""
         # Create booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -464,20 +467,22 @@ class TestCancelBooking:
         booking_id = create_response.json()["id"]
 
         # Cancel booking
-        response = client.delete(f"/api/v1/bookings/{booking_id}")
+        response = await client.delete(f"/api/v1/bookings/{booking_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "cancelled"
 
-    def test_cancel_booking_not_found(self):
+    @pytest.mark.asyncio
+    async def test_cancel_booking_not_found(self, client):
         """Test cancelling a non-existent booking."""
-        response = client.delete("/api/v1/bookings/999")
+        response = await client.delete("/api/v1/bookings/999")
         assert response.status_code == 404
 
-    def test_cancel_already_cancelled(self):
+    @pytest.mark.asyncio
+    async def test_cancel_already_cancelled(self, client):
         """Test cancelling an already cancelled booking."""
         # Create and cancel booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -487,17 +492,18 @@ class TestCancelBooking:
             },
         )
         booking_id = create_response.json()["id"]
-        client.delete(f"/api/v1/bookings/{booking_id}")
+        await client.delete(f"/api/v1/bookings/{booking_id}")
 
         # Try to cancel again
-        response = client.delete(f"/api/v1/bookings/{booking_id}")
+        response = await client.delete(f"/api/v1/bookings/{booking_id}")
         assert response.status_code == 400
         assert "already_cancelled" in response.json()["error"]
 
-    def test_cancelled_booking_not_in_list(self):
+    @pytest.mark.asyncio
+    async def test_cancelled_booking_not_in_list(self, client):
         """Test that cancelled bookings don't appear in conflict checks."""
         # Create and cancel booking
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,
@@ -507,10 +513,10 @@ class TestCancelBooking:
             },
         )
         booking_id = create_response.json()["id"]
-        client.delete(f"/api/v1/bookings/{booking_id}")
+        await client.delete(f"/api/v1/bookings/{booking_id}")
 
         # Create new booking for same dates (should succeed)
-        response = client.post(
+        response = await client.post(
             "/api/v1/bookings",
             json={
                 "house_id": 1,

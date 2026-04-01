@@ -4,7 +4,9 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.database import get_db
 from backend.exceptions import HouseNotFoundError
 from backend.repositories.booking import BookingRepository
 from backend.repositories.house import HouseRepository
@@ -16,18 +18,34 @@ from backend.schemas.house import (
     OccupiedDateRange,
     UpdateHouseRequest,
 )
-from backend.services.booking import get_booking_repository
 
 
-def get_house_repository() -> HouseRepository:
+async def get_house_repository(
+    db: AsyncSession = Depends(get_db),
+) -> HouseRepository:
     """Dependency provider for house repository.
 
-    Returns singleton instance of in-memory repository.
-    To be replaced with database session in task-06.
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        HouseRepository instance with database session
     """
-    if not hasattr(get_house_repository, "_instance"):
-        get_house_repository._instance = HouseRepository()
-    return get_house_repository._instance
+    return HouseRepository(db)
+
+
+async def get_booking_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookingRepository:
+    """Dependency provider for booking repository.
+
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        BookingRepository instance with database session
+    """
+    return BookingRepository(db)
 
 
 class HouseService:
@@ -50,7 +68,7 @@ class HouseService:
         self._repo = repository
         self._booking_repo = booking_repository
 
-    def create_house(
+    async def create_house(
         self,
         owner_id: int,
         request: CreateHouseRequest,
@@ -64,7 +82,7 @@ class HouseService:
         Returns:
             Created house
         """
-        return self._repo.create(
+        return await self._repo.create(
             name=request.name,
             description=request.description,
             capacity=request.capacity,
@@ -72,7 +90,7 @@ class HouseService:
             owner_id=owner_id,
         )
 
-    def get_house(self, house_id: int) -> HouseResponse:
+    async def get_house(self, house_id: int) -> HouseResponse:
         """Get house by ID.
 
         Args:
@@ -84,12 +102,12 @@ class HouseService:
         Raises:
             HouseNotFoundError: If house not found
         """
-        house = self._repo.get(house_id)
+        house = await self._repo.get(house_id)
         if not house:
             raise HouseNotFoundError(house_id)
         return house
 
-    def list_houses(
+    async def list_houses(
         self,
         filters: HouseFilterParams,
     ) -> tuple[List[HouseResponse], int]:
@@ -101,7 +119,7 @@ class HouseService:
         Returns:
             Tuple of (houses list, total count)
         """
-        return self._repo.get_all(
+        return await self._repo.get_all(
             owner_id=filters.owner_id,
             is_active=filters.is_active,
             capacity_min=filters.capacity_min,
@@ -111,7 +129,7 @@ class HouseService:
             sort=filters.sort,
         )
 
-    def update_house(
+    async def update_house(
         self,
         house_id: int,
         request: UpdateHouseRequest,
@@ -128,11 +146,11 @@ class HouseService:
         Raises:
             HouseNotFoundError: If house not found
         """
-        existing = self._repo.get(house_id)
+        existing = await self._repo.get(house_id)
         if not existing:
             raise HouseNotFoundError(house_id)
 
-        updated = self._repo.update(
+        updated = await self._repo.update(
             house_id=house_id,
             name=request.name,
             description=request.description,
@@ -141,7 +159,7 @@ class HouseService:
         )
         return updated
 
-    def replace_house(
+    async def replace_house(
         self,
         house_id: int,
         request: CreateHouseRequest,
@@ -158,11 +176,11 @@ class HouseService:
         Raises:
             HouseNotFoundError: If house not found
         """
-        existing = self._repo.get(house_id)
+        existing = await self._repo.get(house_id)
         if not existing:
             raise HouseNotFoundError(house_id)
 
-        updated = self._repo.update(
+        updated = await self._repo.update(
             house_id=house_id,
             name=request.name,
             description=request.description,
@@ -171,7 +189,7 @@ class HouseService:
         )
         return updated
 
-    def delete_house(self, house_id: int) -> None:
+    async def delete_house(self, house_id: int) -> None:
         """Delete a house.
 
         Args:
@@ -180,13 +198,13 @@ class HouseService:
         Raises:
             HouseNotFoundError: If house not found
         """
-        existing = self._repo.get(house_id)
+        existing = await self._repo.get(house_id)
         if not existing:
             raise HouseNotFoundError(house_id)
 
-        self._repo.delete(house_id)
+        await self._repo.delete(house_id)
 
-    def get_house_calendar(
+    async def get_house_calendar(
         self,
         house_id: int,
         date_from: Optional[date] = None,
@@ -205,12 +223,12 @@ class HouseService:
         Raises:
             HouseNotFoundError: If house not found
         """
-        house = self._repo.get(house_id)
+        house = await self._repo.get(house_id)
         if not house:
             raise HouseNotFoundError(house_id)
 
         # Get all bookings for this house (excluding cancelled)
-        bookings = self._booking_repo.get_bookings_for_house(house_id)
+        bookings = await self._booking_repo.get_bookings_for_house(house_id)
 
         occupied_dates: List[OccupiedDateRange] = []
         for booking in bookings:

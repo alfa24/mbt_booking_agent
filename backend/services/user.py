@@ -3,7 +3,9 @@
 from typing import List, Optional
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.database import get_db
 from backend.exceptions import UserNotFoundError
 from backend.repositories.user import UserRepository
 from backend.schemas.user import (
@@ -11,19 +13,21 @@ from backend.schemas.user import (
     UpdateUserRequest,
     UserFilterParams,
     UserResponse,
-    UserRole,
 )
 
 
-def get_user_repository() -> UserRepository:
+async def get_user_repository(
+    db: AsyncSession = Depends(get_db),
+) -> UserRepository:
     """Dependency provider for user repository.
 
-    Returns singleton instance of in-memory repository.
-    To be replaced with database session in task-06.
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        UserRepository instance with database session
     """
-    if not hasattr(get_user_repository, "_instance"):
-        get_user_repository._instance = UserRepository()
-    return get_user_repository._instance
+    return UserRepository(db)
 
 
 class UserService:
@@ -43,7 +47,7 @@ class UserService:
         """
         self._repo = repository
 
-    def create_user(self, request: CreateUserRequest) -> UserResponse:
+    async def create_user(self, request: CreateUserRequest) -> UserResponse:
         """Create a new user.
 
         Args:
@@ -52,13 +56,13 @@ class UserService:
         Returns:
             Created user
         """
-        return self._repo.create(
+        return await self._repo.create(
             telegram_id=request.telegram_id,
             name=request.name,
             role=request.role,
         )
 
-    def get_user(self, user_id: int) -> UserResponse:
+    async def get_user(self, user_id: int) -> UserResponse:
         """Get user by ID.
 
         Args:
@@ -70,12 +74,12 @@ class UserService:
         Raises:
             UserNotFoundError: If user not found
         """
-        user = self._repo.get(user_id)
+        user = await self._repo.get(user_id)
         if not user:
             raise UserNotFoundError(user_id)
         return user
 
-    def get_user_by_telegram_id(self, telegram_id: str) -> Optional[UserResponse]:
+    async def get_user_by_telegram_id(self, telegram_id: str) -> Optional[UserResponse]:
         """Get user by Telegram ID.
 
         Args:
@@ -84,9 +88,9 @@ class UserService:
         Returns:
             User if found, None otherwise
         """
-        return self._repo.get_by_telegram_id(telegram_id)
+        return await self._repo.get_by_telegram_id(telegram_id)
 
-    def list_users(
+    async def list_users(
         self,
         filters: UserFilterParams,
     ) -> tuple[List[UserResponse], int]:
@@ -98,14 +102,14 @@ class UserService:
         Returns:
             Tuple of (users list, total count)
         """
-        return self._repo.get_all(
+        return await self._repo.get_all(
             role=filters.role,
             limit=filters.limit,
             offset=filters.offset,
             sort=filters.sort,
         )
 
-    def update_user(
+    async def update_user(
         self,
         user_id: int,
         request: UpdateUserRequest,
@@ -122,18 +126,18 @@ class UserService:
         Raises:
             UserNotFoundError: If user not found
         """
-        existing = self._repo.get(user_id)
+        existing = await self._repo.get(user_id)
         if not existing:
             raise UserNotFoundError(user_id)
 
-        updated = self._repo.update(
+        updated = await self._repo.update(
             user_id=user_id,
             name=request.name,
             role=request.role,
         )
         return updated
 
-    def replace_user(
+    async def replace_user(
         self,
         user_id: int,
         request: CreateUserRequest,
@@ -150,19 +154,19 @@ class UserService:
         Raises:
             UserNotFoundError: If user not found
         """
-        existing = self._repo.get(user_id)
+        existing = await self._repo.get(user_id)
         if not existing:
             raise UserNotFoundError(user_id)
 
         # For full replace, we update all fields
-        updated = self._repo.update(
+        updated = await self._repo.update(
             user_id=user_id,
             name=request.name,
             role=request.role,
         )
         return updated
 
-    def delete_user(self, user_id: int) -> None:
+    async def delete_user(self, user_id: int) -> None:
         """Delete a user.
 
         Args:
@@ -171,8 +175,8 @@ class UserService:
         Raises:
             UserNotFoundError: If user not found
         """
-        existing = self._repo.get(user_id)
+        existing = await self._repo.get(user_id)
         if not existing:
             raise UserNotFoundError(user_id)
 
-        self._repo.delete(user_id)
+        await self._repo.delete(user_id)

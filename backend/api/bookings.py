@@ -42,7 +42,7 @@ async def list_bookings(
     Returns:
         Paginated list of bookings
     """
-    bookings, total = service.list_bookings(filters)
+    bookings, total = await service.list_bookings(filters)
     return PaginatedResponse(
         items=bookings,
         total=total,
@@ -80,7 +80,7 @@ async def get_booking(
     Raises:
         HTTPException: 404 if booking not found
     """
-    return service.get_booking(booking_id)
+    return await service.get_booking(booking_id)
 
 
 @bookings_router.post(
@@ -123,7 +123,7 @@ async def create_booking(
     # TODO: Replace with actual auth when implementing authentication
     # See task-05 or task-07 for JWT integration
     tenant_id = 1
-    return service.create_booking(tenant_id, request)
+    return await service.create_booking(tenant_id, request)
 
 
 @bookings_router.patch(
@@ -174,7 +174,7 @@ async def update_booking(
     """
     # TODO: Replace with actual auth when implementing authentication
     tenant_id = 1
-    return service.update_booking(booking_id, tenant_id, request)
+    return await service.update_booking(booking_id, tenant_id, request)
 
 
 @bookings_router.delete(
@@ -219,4 +219,4 @@ async def cancel_booking(
     """
     # TODO: Replace with actual auth when implementing authentication
     tenant_id = 1
-    return service.cancel_booking(booking_id, tenant_id)
+    return await service.cancel_booking(booking_id, tenant_id)

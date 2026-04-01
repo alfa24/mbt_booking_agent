@@ -1,30 +1,26 @@
-"""In-memory user repository for MVP."""
+"""SQLAlchemy user repository."""
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-from backend.schemas.user import UserResponse, UserRole
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.user import User, UserRole
+from backend.schemas.user import UserResponse
 
 
 class UserRepository:
-    """In-memory repository for users.
+    """SQLAlchemy repository for users."""
 
-    Uses dict for storage with auto-increment ID.
-    To be replaced with SQLAlchemy repository in task-06.
-    """
+    def __init__(self, session: AsyncSession):
+        """Initialize repository with database session.
 
-    def __init__(self):
-        """Initialize repository with empty storage."""
-        self._storage: Dict[int, UserResponse] = {}
-        self._counter: int = 0
-        self._telegram_id_index: Dict[str, int] = {}  # Index for telegram_id lookup
+        Args:
+            session: SQLAlchemy async session
+        """
+        self._session = session
 
-    def _get_next_id(self) -> int:
-        """Generate next user ID."""
-        self._counter += 1
-        return self._counter
-
-    def create(
+    async def create(
         self,
         telegram_id: str,
         name: str,
@@ -40,19 +36,13 @@ class UserRepository:
         Returns:
             Created user response
         """
-        user_id = self._get_next_id()
-        user = UserResponse(
-            id=user_id,
-            telegram_id=telegram_id,
-            name=name,
-            role=role,
-            created_at=datetime.now(timezone.utc),
-        )
-        self._storage[user_id] = user
-        self._telegram_id_index[telegram_id] = user_id
-        return user
+        user = User(telegram_id=telegram_id, name=name, role=role)
+        self._session.add(user)
+        await self._session.flush()
+        await self._session.refresh(user)
+        return UserResponse.model_validate(user)
 
-    def get(self, user_id: int) -> Optional[UserResponse]:
+    async def get(self, user_id: int) -> Optional[UserResponse]:
         """Get user by ID.
 
         Args:
@@ -61,9 +51,11 @@ class UserRepository:
         Returns:
             User if found, None otherwise
         """
-        return self._storage.get(user_id)
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        return UserResponse.model_validate(user) if user else None
 
-    def get_by_telegram_id(self, telegram_id: str) -> Optional[UserResponse]:
+    async def get_by_telegram_id(self, telegram_id: str) -> Optional[UserResponse]:
         """Get user by Telegram ID.
 
         Args:
@@ -72,12 +64,13 @@ class UserRepository:
         Returns:
             User if found, None otherwise
         """
-        user_id = self._telegram_id_index.get(telegram_id)
-        if user_id:
-            return self._storage.get(user_id)
-        return None
+        result = await self._session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        return UserResponse.model_validate(user) if user else None
 
-    def get_all(
+    async def get_all(
         self,
         role: Optional[UserRole] = None,
         limit: int = 20,
@@ -95,31 +88,38 @@ class UserRepository:
         Returns:
             Tuple of (filtered users list, total count)
         """
-        users = list(self._storage.values())
+        query = select(User)
 
         # Apply filters
         if role is not None:
-            users = [u for u in users if u.role == role]
+            query = query.where(User.role == role)
+
+        # Get total count
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar() or 0
 
         # Apply sorting
         if sort:
             reverse = sort.startswith("-")
             sort_field = sort[1:] if reverse else sort
-            if sort_field in ("name", "created_at", "id"):
-                users = sorted(
-                    users,
-                    key=lambda u: getattr(u, sort_field),
-                    reverse=reverse,
+            if hasattr(User, sort_field):
+                order = (
+                    getattr(User, sort_field).desc()
+                    if reverse
+                    else getattr(User, sort_field)
                 )
-
-        total = len(users)
+                query = query.order_by(order)
 
         # Apply pagination
-        users = users[offset : offset + limit]
+        query = query.offset(offset).limit(limit)
 
-        return users, total
+        result = await self._session.execute(query)
+        users = result.scalars().all()
+        return [UserResponse.model_validate(user) for user in users], total
 
-    def update(
+    async def update(
         self,
         user_id: int,
         name: Optional[str] = None,
@@ -135,22 +135,21 @@ class UserRepository:
         Returns:
             Updated user if found, None otherwise
         """
-        user = self._storage.get(user_id)
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
         if not user:
             return None
 
-        # Create updated user with new values
-        updated_data = user.model_dump()
         if name is not None:
-            updated_data["name"] = name
+            user.name = name
         if role is not None:
-            updated_data["role"] = role
+            user.role = role
 
-        updated_user = UserResponse(**updated_data)
-        self._storage[user_id] = updated_user
-        return updated_user
+        await self._session.flush()
+        await self._session.refresh(user)
+        return UserResponse.model_validate(user)
 
-    def delete(self, user_id: int) -> bool:
+    async def delete(self, user_id: int) -> bool:
         """Delete user by ID.
 
         Args:
@@ -159,15 +158,10 @@ class UserRepository:
         Returns:
             True if deleted, False if not found
         """
-        user = self._storage.get(user_id)
-        if user:
-            del self._storage[user_id]
-            del self._telegram_id_index[user.telegram_id]
-            return True
-        return False
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            return False
 
-    def clear(self) -> None:
-        """Clear all users (for testing)."""
-        self._storage.clear()
-        self._telegram_id_index.clear()
-        self._counter = 0
+        await self._session.delete(user)
+        return True

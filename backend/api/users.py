@@ -41,7 +41,7 @@ async def list_users(
     Returns:
         Paginated list of users
     """
-    users, total = service.list_users(filters)
+    users, total = await service.list_users(filters)
     return PaginatedResponse(
         items=users,
         total=total,
@@ -79,7 +79,7 @@ async def get_user(
     Raises:
         HTTPException: 404 if user not found
     """
-    return service.get_user(user_id)
+    return await service.get_user(user_id)
 
 
 @users_router.post(
@@ -112,7 +112,7 @@ async def create_user(
     Raises:
         HTTPException: 422 if validation fails
     """
-    return service.create_user(request)
+    return await service.create_user(request)
 
 
 @users_router.put(
@@ -150,7 +150,7 @@ async def replace_user(
     Raises:
         HTTPException: 404 if user not found, 422 if validation fails
     """
-    return service.replace_user(user_id, request)
+    return await service.replace_user(user_id, request)
 
 
 @users_router.patch(
@@ -190,7 +190,7 @@ async def update_user(
     Raises:
         HTTPException: 404 if not found, 422 if validation fails
     """
-    return service.update_user(user_id, request)
+    return await service.update_user(user_id, request)
 
 
 @users_router.delete(
@@ -219,4 +219,4 @@ async def delete_user(
     Raises:
         HTTPException: 404 if user not found
     """
-    service.delete_user(user_id)
+    await service.delete_user(user_id)

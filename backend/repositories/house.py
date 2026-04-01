@@ -1,29 +1,26 @@
-"""In-memory house repository for MVP."""
+"""SQLAlchemy house repository."""
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.house import House
 from backend.schemas.house import HouseResponse
 
 
 class HouseRepository:
-    """In-memory repository for houses.
+    """SQLAlchemy repository for houses."""
 
-    Uses dict for storage with auto-increment ID.
-    To be replaced with SQLAlchemy repository in task-06.
-    """
+    def __init__(self, session: AsyncSession):
+        """Initialize repository with database session.
 
-    def __init__(self):
-        """Initialize repository with empty storage."""
-        self._storage: Dict[int, HouseResponse] = {}
-        self._counter: int = 0
+        Args:
+            session: SQLAlchemy async session
+        """
+        self._session = session
 
-    def _get_next_id(self) -> int:
-        """Generate next house ID."""
-        self._counter += 1
-        return self._counter
-
-    def create(
+    async def create(
         self,
         name: str,
         description: Optional[str],
@@ -43,20 +40,19 @@ class HouseRepository:
         Returns:
             Created house response
         """
-        house_id = self._get_next_id()
-        house = HouseResponse(
-            id=house_id,
+        house = House(
             name=name,
             description=description,
             capacity=capacity,
             is_active=is_active,
             owner_id=owner_id,
-            created_at=datetime.now(timezone.utc),
         )
-        self._storage[house_id] = house
-        return house
+        self._session.add(house)
+        await self._session.flush()
+        await self._session.refresh(house)
+        return HouseResponse.model_validate(house)
 
-    def get(self, house_id: int) -> Optional[HouseResponse]:
+    async def get(self, house_id: int) -> Optional[HouseResponse]:
         """Get house by ID.
 
         Args:
@@ -65,9 +61,11 @@ class HouseRepository:
         Returns:
             House if found, None otherwise
         """
-        return self._storage.get(house_id)
+        result = await self._session.execute(select(House).where(House.id == house_id))
+        house = result.scalar_one_or_none()
+        return HouseResponse.model_validate(house) if house else None
 
-    def get_all(
+    async def get_all(
         self,
         owner_id: Optional[int] = None,
         is_active: Optional[bool] = None,
@@ -91,37 +89,44 @@ class HouseRepository:
         Returns:
             Tuple of (filtered houses list, total count)
         """
-        houses = list(self._storage.values())
+        query = select(House)
 
         # Apply filters
         if owner_id is not None:
-            houses = [h for h in houses if h.owner_id == owner_id]
+            query = query.where(House.owner_id == owner_id)
         if is_active is not None:
-            houses = [h for h in houses if h.is_active == is_active]
+            query = query.where(House.is_active == is_active)
         if capacity_min is not None:
-            houses = [h for h in houses if h.capacity >= capacity_min]
+            query = query.where(House.capacity >= capacity_min)
         if capacity_max is not None:
-            houses = [h for h in houses if h.capacity <= capacity_max]
+            query = query.where(House.capacity <= capacity_max)
+
+        # Get total count
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar() or 0
 
         # Apply sorting
         if sort:
             reverse = sort.startswith("-")
             sort_field = sort[1:] if reverse else sort
-            if sort_field in ("name", "capacity", "created_at", "id"):
-                houses = sorted(
-                    houses,
-                    key=lambda h: getattr(h, sort_field),
-                    reverse=reverse,
+            if hasattr(House, sort_field):
+                order = (
+                    getattr(House, sort_field).desc()
+                    if reverse
+                    else getattr(House, sort_field)
                 )
-
-        total = len(houses)
+                query = query.order_by(order)
 
         # Apply pagination
-        houses = houses[offset : offset + limit]
+        query = query.offset(offset).limit(limit)
 
-        return houses, total
+        result = await self._session.execute(query)
+        houses = result.scalars().all()
+        return [HouseResponse.model_validate(house) for house in houses], total
 
-    def update(
+    async def update(
         self,
         house_id: int,
         name: Optional[str] = None,
@@ -141,26 +146,25 @@ class HouseRepository:
         Returns:
             Updated house if found, None otherwise
         """
-        house = self._storage.get(house_id)
+        result = await self._session.execute(select(House).where(House.id == house_id))
+        house = result.scalar_one_or_none()
         if not house:
             return None
 
-        # Create updated house with new values
-        updated_data = house.model_dump()
         if name is not None:
-            updated_data["name"] = name
+            house.name = name
         if description is not None:
-            updated_data["description"] = description
+            house.description = description
         if capacity is not None:
-            updated_data["capacity"] = capacity
+            house.capacity = capacity
         if is_active is not None:
-            updated_data["is_active"] = is_active
+            house.is_active = is_active
 
-        updated_house = HouseResponse(**updated_data)
-        self._storage[house_id] = updated_house
-        return updated_house
+        await self._session.flush()
+        await self._session.refresh(house)
+        return HouseResponse.model_validate(house)
 
-    def delete(self, house_id: int) -> bool:
+    async def delete(self, house_id: int) -> bool:
         """Delete house by ID.
 
         Args:
@@ -169,12 +173,10 @@ class HouseRepository:
         Returns:
             True if deleted, False if not found
         """
-        if house_id in self._storage:
-            del self._storage[house_id]
-            return True
-        return False
+        result = await self._session.execute(select(House).where(House.id == house_id))
+        house = result.scalar_one_or_none()
+        if not house:
+            return False
 
-    def clear(self) -> None:
-        """Clear all houses (for testing)."""
-        self._storage.clear()
-        self._counter = 0
+        await self._session.delete(house)
+        return True

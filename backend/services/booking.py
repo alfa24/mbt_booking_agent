@@ -4,7 +4,9 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.database import get_db
 from backend.exceptions import (
     BookingAlreadyCancelledError,
     BookingNotFoundError,
@@ -23,16 +25,18 @@ from backend.schemas.booking import (
 )
 
 
-def get_booking_repository() -> BookingRepository:
+async def get_booking_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookingRepository:
     """Dependency provider for booking repository.
 
-    Returns singleton instance of in-memory repository.
-    To be replaced with database session in task-06.
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        BookingRepository instance with database session
     """
-    # Singleton pattern for MVP
-    if not hasattr(get_booking_repository, "_instance"):
-        get_booking_repository._instance = BookingRepository()
-    return get_booking_repository._instance
+    return BookingRepository(db)
 
 
 class BookingService:
@@ -42,7 +46,10 @@ class BookingService:
     amount calculation, and status management.
     """
 
-    def __init__(self, repository: BookingRepository = Depends(get_booking_repository)):
+    def __init__(
+        self,
+        repository: BookingRepository = Depends(get_booking_repository),
+    ):
         """Initialize service with repository.
 
         Args:
@@ -50,7 +57,7 @@ class BookingService:
         """
         self._repo = repository
 
-    def _check_date_conflicts(
+    async def _check_date_conflicts(
         self,
         house_id: int,
         check_in: date,
@@ -68,7 +75,7 @@ class BookingService:
         Raises:
             HTTPException: If dates conflict with existing booking
         """
-        existing_bookings = self._repo.get_bookings_for_house(
+        existing_bookings = await self._repo.get_bookings_for_house(
             house_id, exclude_booking_id
         )
 
@@ -106,7 +113,7 @@ class BookingService:
 
         return total
 
-    def create_booking(
+    async def create_booking(
         self,
         tenant_id: int,
         request: CreateBookingRequest,
@@ -124,7 +131,7 @@ class BookingService:
             HTTPException: If validation fails or dates conflict
         """
         # Check date conflicts
-        self._check_date_conflicts(
+        await self._check_date_conflicts(
             request.house_id,
             request.check_in,
             request.check_out,
@@ -140,7 +147,7 @@ class BookingService:
         ]
 
         # Create booking
-        booking = self._repo.create(
+        booking = await self._repo.create(
             house_id=request.house_id,
             tenant_id=tenant_id,
             check_in=request.check_in,
@@ -151,7 +158,7 @@ class BookingService:
 
         return booking
 
-    def get_booking(self, booking_id: int) -> BookingResponse:
+    async def get_booking(self, booking_id: int) -> BookingResponse:
         """Get booking by ID.
 
         Args:
@@ -163,12 +170,12 @@ class BookingService:
         Raises:
             HTTPException: If booking not found
         """
-        booking = self._repo.get(booking_id)
+        booking = await self._repo.get(booking_id)
         if not booking:
             raise BookingNotFoundError(booking_id)
         return booking
 
-    def list_bookings(
+    async def list_bookings(
         self,
         filters: BookingFilterParams,
     ) -> tuple[List[BookingResponse], int]:
@@ -180,7 +187,7 @@ class BookingService:
         Returns:
             Tuple of (bookings list, total count)
         """
-        return self._repo.get_all(
+        return await self._repo.get_all(
             user_id=filters.user_id,
             house_id=filters.house_id,
             status=filters.status,
@@ -189,7 +196,7 @@ class BookingService:
             sort=filters.sort,
         )
 
-    def update_booking(
+    async def update_booking(
         self,
         booking_id: int,
         tenant_id: int,
@@ -209,7 +216,7 @@ class BookingService:
             HTTPException: If booking not found, unauthorized, or validation fails
         """
         # Get existing booking
-        existing = self._repo.get(booking_id)
+        existing = await self._repo.get(booking_id)
         if not existing:
             raise BookingNotFoundError(booking_id)
 
@@ -230,7 +237,7 @@ class BookingService:
 
         # Check date conflicts if dates changed
         if request.check_in or request.check_out:
-            self._check_date_conflicts(
+            await self._check_date_conflicts(
                 existing.house_id,
                 new_check_in,
                 new_check_out,
@@ -251,7 +258,7 @@ class BookingService:
             ]
 
         # Update booking
-        updated = self._repo.update(
+        updated = await self._repo.update(
             booking_id=booking_id,
             check_in=request.check_in,
             check_out=request.check_out,
@@ -262,7 +269,7 @@ class BookingService:
 
         return updated
 
-    def cancel_booking(self, booking_id: int, tenant_id: int) -> BookingResponse:
+    async def cancel_booking(self, booking_id: int, tenant_id: int) -> BookingResponse:
         """Cancel a booking (soft delete).
 
         Args:
@@ -276,7 +283,7 @@ class BookingService:
             HTTPException: If booking not found or unauthorized
         """
         # Get existing booking
-        existing = self._repo.get(booking_id)
+        existing = await self._repo.get(booking_id)
         if not existing:
             raise BookingNotFoundError(booking_id)
 
@@ -295,7 +302,7 @@ class BookingService:
             )
 
         # Update status to cancelled
-        updated = self._repo.update(
+        updated = await self._repo.update(
             booking_id=booking_id,
             status=BookingStatus.CANCELLED,
         )

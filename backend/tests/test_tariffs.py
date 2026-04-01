@@ -1,29 +1,15 @@
 """Tests for tariff API endpoints."""
 
 import pytest
-from fastapi.testclient import TestClient
-
-from backend.main import app
-
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clear_repository():
-    """Clear repository before each test."""
-    from backend.services.tariff import get_tariff_repository
-
-    repo = get_tariff_repository()
-    repo.clear()
-    yield
 
 
 class TestCreateTariff:
     """Tests for POST /api/v1/tariffs"""
 
-    def test_create_tariff_success(self):
+    @pytest.mark.asyncio
+    async def test_create_tariff_success(self, client):
         """Test creating a tariff with valid data."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/tariffs",
             json={
                 "name": "Взрослый",
@@ -37,9 +23,10 @@ class TestCreateTariff:
         assert data["amount"] == 250
         assert "created_at" in data
 
-    def test_create_tariff_free(self):
+    @pytest.mark.asyncio
+    async def test_create_tariff_free(self, client):
         """Test creating a free tariff (amount=0)."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/tariffs",
             json={
                 "name": "Ребёнок",
@@ -51,9 +38,10 @@ class TestCreateTariff:
         assert data["name"] == "Ребёнок"
         assert data["amount"] == 0
 
-    def test_create_tariff_invalid_amount(self):
+    @pytest.mark.asyncio
+    async def test_create_tariff_invalid_amount(self, client):
         """Test creating a tariff with negative amount."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/tariffs",
             json={
                 "name": "Invalid",
@@ -62,9 +50,10 @@ class TestCreateTariff:
         )
         assert response.status_code == 422
 
-    def test_create_tariff_empty_name(self):
+    @pytest.mark.asyncio
+    async def test_create_tariff_empty_name(self, client):
         """Test creating a tariff with empty name."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/tariffs",
             json={
                 "name": "",
@@ -77,26 +66,28 @@ class TestCreateTariff:
 class TestGetTariff:
     """Tests for GET /api/v1/tariffs/{id}"""
 
-    def test_get_tariff_success(self):
+    @pytest.mark.asyncio
+    async def test_get_tariff_success(self, client):
         """Test getting an existing tariff."""
         # Create tariff first
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/tariffs",
             json={"name": "Тестовый тариф", "amount": 100},
         )
         tariff_id = create_response.json()["id"]
 
         # Get the tariff
-        response = client.get(f"/api/v1/tariffs/{tariff_id}")
+        response = await client.get(f"/api/v1/tariffs/{tariff_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == tariff_id
         assert data["name"] == "Тестовый тариф"
         assert data["amount"] == 100
 
-    def test_get_tariff_not_found(self):
+    @pytest.mark.asyncio
+    async def test_get_tariff_not_found(self, client):
         """Test getting a non-existent tariff."""
-        response = client.get("/api/v1/tariffs/999")
+        response = await client.get("/api/v1/tariffs/999")
         assert response.status_code == 404
         assert response.json()["error"] == "not_found"
 
@@ -104,42 +95,45 @@ class TestGetTariff:
 class TestListTariffs:
     """Tests for GET /api/v1/tariffs"""
 
-    def test_list_tariffs_empty(self):
+    @pytest.mark.asyncio
+    async def test_list_tariffs_empty(self, client):
         """Test listing tariffs when none exist."""
-        response = client.get("/api/v1/tariffs")
+        response = await client.get("/api/v1/tariffs")
         assert response.status_code == 200
         data = response.json()
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_list_tariffs_with_data(self):
+    @pytest.mark.asyncio
+    async def test_list_tariffs_with_data(self, client):
         """Test listing multiple tariffs."""
         # Create two tariffs
-        client.post(
+        await client.post(
             "/api/v1/tariffs",
             json={"name": "Тариф 1", "amount": 100},
         )
-        client.post(
+        await client.post(
             "/api/v1/tariffs",
             json={"name": "Тариф 2", "amount": 200},
         )
 
-        response = client.get("/api/v1/tariffs")
+        response = await client.get("/api/v1/tariffs")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 2
         assert data["total"] == 2
 
-    def test_list_tariffs_pagination(self):
+    @pytest.mark.asyncio
+    async def test_list_tariffs_pagination(self, client):
         """Test pagination with limit and offset."""
         # Create multiple tariffs
         for i in range(5):
-            client.post(
+            await client.post(
                 "/api/v1/tariffs",
                 json={"name": f"Тариф {i+1}", "amount": (i + 1) * 100},
             )
 
-        response = client.get("/api/v1/tariffs?limit=2&offset=1")
+        response = await client.get("/api/v1/tariffs?limit=2&offset=1")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 2
@@ -147,32 +141,33 @@ class TestListTariffs:
         assert data["limit"] == 2
         assert data["offset"] == 1
 
-    def test_list_tariffs_sorting(self):
+    @pytest.mark.asyncio
+    async def test_list_tariffs_sorting(self, client):
         """Test sorting tariffs."""
         # Create tariffs
-        client.post(
+        await client.post(
             "/api/v1/tariffs",
             json={"name": "Бета", "amount": 200},
         )
-        client.post(
+        await client.post(
             "/api/v1/tariffs",
             json={"name": "Альфа", "amount": 100},
         )
 
         # Sort by name ascending
-        response = client.get("/api/v1/tariffs?sort=name")
+        response = await client.get("/api/v1/tariffs?sort=name")
         assert response.status_code == 200
         data = response.json()
         assert data["items"][0]["name"] == "Альфа"
 
         # Sort by name descending
-        response = client.get("/api/v1/tariffs?sort=-name")
+        response = await client.get("/api/v1/tariffs?sort=-name")
         assert response.status_code == 200
         data = response.json()
         assert data["items"][0]["name"] == "Бета"
 
         # Sort by amount
-        response = client.get("/api/v1/tariffs?sort=amount")
+        response = await client.get("/api/v1/tariffs?sort=amount")
         assert response.status_code == 200
         data = response.json()
         assert data["items"][0]["amount"] == 100
@@ -181,17 +176,18 @@ class TestListTariffs:
 class TestUpdateTariff:
     """Tests for PATCH /api/v1/tariffs/{id}"""
 
-    def test_update_tariff_partial(self):
+    @pytest.mark.asyncio
+    async def test_update_tariff_partial(self, client):
         """Test partial update of tariff."""
         # Create tariff
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/tariffs",
             json={"name": "Старое название", "amount": 100},
         )
         tariff_id = create_response.json()["id"]
 
         # Update only name
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/tariffs/{tariff_id}",
             json={"name": "Новое название"},
         )
@@ -200,17 +196,18 @@ class TestUpdateTariff:
         assert data["name"] == "Новое название"
         assert data["amount"] == 100  # unchanged
 
-    def test_update_tariff_amount(self):
+    @pytest.mark.asyncio
+    async def test_update_tariff_amount(self, client):
         """Test updating tariff amount."""
         # Create tariff
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/tariffs",
             json={"name": "Тариф", "amount": 100},
         )
         tariff_id = create_response.json()["id"]
 
         # Update amount
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/tariffs/{tariff_id}",
             json={"amount": 150},
         )
@@ -218,25 +215,27 @@ class TestUpdateTariff:
         data = response.json()
         assert data["amount"] == 150
 
-    def test_update_tariff_not_found(self):
+    @pytest.mark.asyncio
+    async def test_update_tariff_not_found(self, client):
         """Test updating a non-existent tariff."""
-        response = client.patch(
+        response = await client.patch(
             "/api/v1/tariffs/999",
             json={"name": "Новое название"},
         )
         assert response.status_code == 404
 
-    def test_update_tariff_invalid_amount(self):
+    @pytest.mark.asyncio
+    async def test_update_tariff_invalid_amount(self, client):
         """Test updating with invalid amount."""
         # Create tariff
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/tariffs",
             json={"name": "Тариф", "amount": 100},
         )
         tariff_id = create_response.json()["id"]
 
         # Try to update with negative amount
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/tariffs/{tariff_id}",
             json={"amount": -50},
         )
@@ -246,24 +245,26 @@ class TestUpdateTariff:
 class TestDeleteTariff:
     """Tests for DELETE /api/v1/tariffs/{id}"""
 
-    def test_delete_tariff_success(self):
+    @pytest.mark.asyncio
+    async def test_delete_tariff_success(self, client):
         """Test deleting a tariff."""
         # Create tariff
-        create_response = client.post(
+        create_response = await client.post(
             "/api/v1/tariffs",
             json={"name": "Тариф для удаления", "amount": 100},
         )
         tariff_id = create_response.json()["id"]
 
         # Delete tariff
-        response = client.delete(f"/api/v1/tariffs/{tariff_id}")
+        response = await client.delete(f"/api/v1/tariffs/{tariff_id}")
         assert response.status_code == 204
 
         # Verify it's gone
-        get_response = client.get(f"/api/v1/tariffs/{tariff_id}")
+        get_response = await client.get(f"/api/v1/tariffs/{tariff_id}")
         assert get_response.status_code == 404
 
-    def test_delete_tariff_not_found(self):
+    @pytest.mark.asyncio
+    async def test_delete_tariff_not_found(self, client):
         """Test deleting a non-existent tariff."""
-        response = client.delete("/api/v1/tariffs/999")
+        response = await client.delete("/api/v1/tariffs/999")
         assert response.status_code == 404

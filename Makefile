@@ -1,4 +1,5 @@
 .PHONY: install run lint format docker-build docker-run docker-down docker-restart
+.PHONY: run-backend run-backend-logs stop-backend build-backend lint-backend format-backend test-backend
 
 install:
 	uv sync
@@ -23,3 +24,25 @@ docker-down:
 
 docker-restart:
 	docker compose down && docker compose up --build
+
+# Backend commands (Docker)
+run-backend:
+	docker compose up backend -d
+
+run-backend-logs:
+	docker compose logs backend -f
+
+stop-backend:
+	docker compose stop backend
+
+build-backend:
+	docker compose build backend
+
+lint-backend:
+	docker compose exec backend uv run ruff check backend/
+
+format-backend:
+	docker compose exec backend uv run ruff format backend/
+
+test-backend:
+	docker compose exec backend uv run pytest backend/tests/ -v

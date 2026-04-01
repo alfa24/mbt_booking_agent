@@ -28,7 +28,7 @@ Backend также интегрируется с внешними сервиса
 | Задача | Описание | Статус | Документы |
 |--------|----------|--------|-----------|
 | 01 | Выбор backend-стека и ADR | ✅ Done | [план](tasks/task-01-stack-adr/plan.md) \| [summary](tasks/task-01-stack-adr/summary.md) |
-| 02 | Генерация каркаса проекта | 📋 Planned | [план](tasks/task-02-scaffold/plan.md) \| [summary](tasks/task-02-scaffold/summary.md) |
+| 02 | Генерация каркаса проекта | ✅ Done | [план](tasks/task-02-scaffold/plan.md) \| [summary](tasks/task-02-scaffold/summary.md) |
 | 03 | Проектирование API-контрактов | 📋 Planned | [план](tasks/task-03-api-contracts/plan.md) \| [summary](tasks/task-03-api-contracts/summary.md) |
 | 04 | Реализация API бронирований | 📋 Planned | [план](tasks/task-04-booking-api/plan.md) \| [summary](tasks/task-04-booking-api/summary.md) |
 | 05 | Реализация API домов и пользователей | 📋 Planned | [план](tasks/task-05-houses-users-api/plan.md) \| [summary](tasks/task-05-houses-users-api/summary.md) |
@@ -81,7 +81,7 @@ Backend также интегрируется с внешними сервиса
 
 ---
 
-## Задача 02: Генерация каркаса проекта 📋
+## Задача 02: Генерация каркаса проекта ✅
 
 ### Цель
 
@@ -91,21 +91,21 @@ Backend также интегрируется с внешними сервиса
 
 ### Состав работ
 
-- [ ] Создание директории `backend/`
-- [ ] Настройка `pyproject.toml` с зависимостями
-- [ ] Структура модулей: api/, models/, schemas/, services/, config.py
-- [ ] Настройка линтеров (ruff) и форматирования
-- [ ] Базовый `main.py` с запуском сервера
-- [ ] Конфигурация через Pydantic-settings
-- [ ] Обновление `.env.example` — добавить переменные backend
-- [ ] Обновление `Makefile` — добавить `make run-backend`, `make lint-backend`
+- [x] Создание директории `backend/`
+- [x] Настройка `pyproject.toml` с зависимостями
+- [x] Структура модулей: api/, models/, schemas/, services/, config.py
+- [x] Настройка линтеров (ruff) и форматирования
+- [x] Базовый `main.py` с запуском сервера
+- [x] Конфигурация через Pydantic-settings
+- [x] Обновление `.env.example` — добавить переменные backend
+- [x] Обновление `Makefile` — добавить `make run-backend`, `make lint-backend`
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] Проект запускается без ошибок: `make run-backend` или `uv run python -m backend.main`
-- [ ] Линтинг проходит: `make lint-backend`
-- [ ] Сервер отвечает на `GET /health` с кодом 200
-- [ ] `.env.example` содержит все необходимые переменные
+- [x] Проект запускается без ошибок: `make run-backend`
+- [x] Линтинг проходит: `make lint-backend`
+- [x] Сервер отвечает на `GET /health` с кодом 200
+- [x] `.env.example` содержит все необходимые переменные
 
 ### Проверка пользователем
 
@@ -114,7 +114,7 @@ Backend также интегрируется с внешними сервиса
 make run-backend
 
 # Проверка health endpoint
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 
 # Ожидаемый ответ: {"status": "ok"}
 ```
@@ -129,6 +129,8 @@ curl http://localhost:8000/health
 - `pyproject.toml` — обновлённый
 - `.env.example` — обновлённый
 - `Makefile` — обновлённый
+- `Dockerfile.backend` — образ для backend
+- `docker-compose.yaml` — сервис backend
 
 ### Документы
 
@@ -141,7 +143,7 @@ curl http://localhost:8000/health
 
 ### Цель
 
-Спроектировать и задокументировать REST API endpoints для сценариев: вопрос к ассистенту и фиксация выполненного ДЗ.
+Спроектировать и задокументировать REST API endpoints для сценариев
 
 > **Рекомендация:** Использовать skill для API-дизайна (`/find-skills` api-design).
 

@@ -13,7 +13,10 @@ from backend.exceptions import (
     BookingNotFoundError,
     BookingPermissionError,
     DateConflictError,
+    HouseNotFoundError,
     InvalidBookingStatusError,
+    TariffNotFoundError,
+    UserNotFoundError,
 )
 from backend.schemas.common import ErrorResponse
 
@@ -112,6 +115,39 @@ async def already_cancelled_handler(request: Request, exc: BookingAlreadyCancell
         status_code=400,
         content=ErrorResponse(
             error="already_cancelled",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(HouseNotFoundError)
+async def house_not_found_handler(request: Request, exc: HouseNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content=ErrorResponse(
+            error="not_found",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(UserNotFoundError)
+async def user_not_found_handler(request: Request, exc: UserNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content=ErrorResponse(
+            error="not_found",
+            message=exc.message,
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(TariffNotFoundError)
+async def tariff_not_found_handler(request: Request, exc: TariffNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content=ErrorResponse(
+            error="not_found",
             message=exc.message,
         ).model_dump(),
     )

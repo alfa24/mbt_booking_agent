@@ -55,3 +55,27 @@ class BookingAlreadyCancelledError(BookingException):
 
     def __init__(self):
         super().__init__("Booking is already cancelled")
+
+
+class HouseNotFoundError(BookingException):
+    """Raised when a house is not found."""
+
+    def __init__(self, house_id: int):
+        self.house_id = house_id
+        super().__init__(f"House with id {house_id} not found")
+
+
+class UserNotFoundError(BookingException):
+    """Raised when a user is not found."""
+
+    def __init__(self, user_id: int):
+        self.user_id = user_id
+        super().__init__(f"User with id {user_id} not found")
+
+
+class TariffNotFoundError(BookingException):
+    """Raised when a tariff is not found."""
+
+    def __init__(self, tariff_id: int):
+        self.tariff_id = tariff_id
+        super().__init__(f"Tariff with id {tariff_id} not found")

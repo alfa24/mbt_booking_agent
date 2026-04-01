@@ -31,7 +31,7 @@ Backend также интегрируется с внешними сервиса
 | 02 | Генерация каркаса проекта | ✅ Done | [план](tasks/task-02-scaffold/plan.md) \| [summary](tasks/task-02-scaffold/summary.md) |
 | 03 | Проектирование API-контрактов | 📋 Planned | [план](tasks/task-03-api-contracts/plan.md) \| [summary](tasks/task-03-api-contracts/summary.md) |
 | 04 | Реализация API бронирований | 📋 Planned | [план](tasks/task-04-booking-api/plan.md) \| [summary](tasks/task-04-booking-api/summary.md) |
-| 05 | Реализация API домов и пользователей | 📋 Planned | [план](tasks/task-05-houses-users-api/plan.md) \| [summary](tasks/task-05-houses-users-api/summary.md) |
+| 05 | Реализация API домов и пользователей | ✅ Done | [план](tasks/task-05-houses-users-api/plan.md) \| [summary](tasks/task-05-houses-users-api/summary.md) |
 | 06 | Подключение PostgreSQL | 📋 Planned | [план](tasks/task-06-database/plan.md) \| [summary](tasks/task-06-database/summary.md) |
 | 07 | Рефакторинг бота для работы через API | 📋 Planned | [план](tasks/task-07-bot-refactor/plan.md) \| [summary](tasks/task-07-bot-refactor/summary.md) |
 | 08 | Актуализация соглашений и документации | 📋 Planned | [план](tasks/task-08-docs-update/plan.md) \| [summary](tasks/task-08-docs-update/summary.md) |
@@ -265,7 +265,7 @@ curl -X POST http://localhost:8001/api/v1/bookings \
 
 ---
 
-## Задача 05: Реализация API домов и пользователей 📋
+## Задача 05: Реализация API домов и пользователей ✅
 
 ### Цель
 
@@ -273,20 +273,20 @@ curl -X POST http://localhost:8001/api/v1/bookings \
 
 ### Состав работ
 
-- [ ] `GET /api/v1/houses` — список домов
-- [ ] `GET /api/v1/houses/{id}` — детали дома
-- [ ] `GET /api/v1/houses/{id}/calendar` — доступность дома
-- [ ] `GET /api/v1/users/{id}` — профиль пользователя
-- [ ] `POST /api/v1/users` — создание пользователя (из Telegram)
-- [ ] `GET /api/v1/tariffs` — справочник тарифов
-- [ ] `GET /api/v1/tariffs/{id}` — детали тарифа
-- [ ] API-тесты для всех endpoints
+- [x] `GET /api/v1/houses` — список домов
+- [x] `GET /api/v1/houses/{id}` — детали дома
+- [x] `GET /api/v1/houses/{id}/calendar` — доступность дома
+- [x] `GET /api/v1/users/{id}` — профиль пользователя
+- [x] `POST /api/v1/users` — создание пользователя (из Telegram)
+- [x] `GET /api/v1/tariffs` — справочник тарифов
+- [x] `GET /api/v1/tariffs/{id}` — детали тарифа
+- [x] API-тесты для всех endpoints
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] Все endpoints работают корректно
-- [ ] Тесты проходят: `pytest backend/tests/test_houses.py backend/tests/test_users.py`
-- [ ] Swagger UI отображает все endpoints
+- [x] Все endpoints работают корректно
+- [x] Тесты проходят: `docker compose exec backend uv run pytest backend/tests/test_houses.py backend/tests/test_users.py backend/tests/test_tariffs.py -v`
+- [x] Swagger UI отображает все endpoints
 
 ### Проверка пользователем
 

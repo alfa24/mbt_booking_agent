@@ -81,7 +81,7 @@ Backend также интегрируется с внешними сервиса
 
 ---
 
-## Задача 02: Генерация каркаса проекта ✅
+## Задача 02: Генерация каркаса проекта 📋
 
 ### Цель
 
@@ -91,21 +91,21 @@ Backend также интегрируется с внешними сервиса
 
 ### Состав работ
 
-- [x] Создание директории `backend/`
-- [x] Настройка `pyproject.toml` с зависимостями
-- [x] Структура модулей: api/, models/, schemas/, services/, config.py
-- [x] Настройка линтеров (ruff) и форматирования
-- [x] Базовый `main.py` с запуском сервера
-- [x] Конфигурация через Pydantic-settings
-- [x] Обновление `.env.example` — добавить переменные backend
-- [x] Обновление `Makefile` — добавить `make run-backend`, `make lint-backend`
+- [ ] Создание директории `backend/`
+- [ ] Настройка `pyproject.toml` с зависимостями
+- [ ] Структура модулей: api/, models/, schemas/, services/, config.py
+- [ ] Настройка линтеров (ruff) и форматирования
+- [ ] Базовый `main.py` с запуском сервера
+- [ ] Конфигурация через Pydantic-settings
+- [ ] Обновление `.env.example` — добавить переменные backend
+- [ ] Обновление `Makefile` — добавить `make run-backend`, `make lint-backend`
 
 ### Definition of Done (самопроверка агента)
 
-- [x] Проект запускается без ошибок: `make run-backend`
-- [x] Линтинг проходит: `make lint-backend`
-- [x] Сервер отвечает на `GET /health` с кодом 200
-- [x] `.env.example` содержит все необходимые переменные
+- [ ] Проект запускается без ошибок: `make run-backend` или `uv run python -m backend.main`
+- [ ] Линтинг проходит: `make lint-backend`
+- [ ] Сервер отвечает на `GET /health` с кодом 200
+- [ ] `.env.example` содержит все необходимые переменные
 
 ### Проверка пользователем
 
@@ -114,7 +114,7 @@ Backend также интегрируется с внешними сервиса
 make run-backend
 
 # Проверка health endpoint
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 
 # Ожидаемый ответ: {"status": "ok"}
 ```
@@ -129,8 +129,6 @@ curl http://localhost:8001/health
 - `pyproject.toml` — обновлённый
 - `.env.example` — обновлённый
 - `Makefile` — обновлённый
-- `Dockerfile.backend` — образ для backend
-- `docker-compose.yaml` — сервис backend
 
 ### Документы
 
@@ -149,22 +147,38 @@ curl http://localhost:8001/health
 
 ### Состав работ
 
-- [ ] Определение ресурсов: users, houses, bookings, tariffs, messages
-- [ ] Проектирование endpoints (RESTful):
-  - `POST /api/v1/chat` — отправка сообщения ассистенту
-  - `POST /api/v1/homework` — фиксация выполненного ДЗ
-- [ ] Определение форматов запросов/ответов (Pydantic схемы)
-- [ ] Коды ошибок и формат error response
-- [ ] Версионирование API (`/api/v1/` префикс)
-- [ ] Документирование в формате OpenAPI/Swagger
+- [x] Определение ресурсов: users, houses, bookings, tariffs
+- [x] Проектирование endpoints (RESTful):
+  - `GET /api/v1/users` — список пользователей
+  - `GET /api/v1/users/{id}` — получение пользователя
+  - `POST /api/v1/users` — создание пользователя (из Telegram)
+  - `PUT /api/v1/users/{id}` — полная замена профиля
+  - `PATCH /api/v1/users/{id}` — частичное обновление профиля
+  - `GET /api/v1/houses` — список домов
+  - `GET /api/v1/houses/{id}` — детали дома
+  - `GET /api/v1/houses/{id}/calendar` — доступность дома
+  - `POST /api/v1/houses` — создание дома
+  - `PUT /api/v1/houses/{id}` — полная замена дома
+  - `PATCH /api/v1/houses/{id}` — частичное обновление дома
+  - `GET /api/v1/bookings` — список бронирований
+  - `GET /api/v1/bookings/{id}` — получение бронирования
+  - `POST /api/v1/bookings` — создание бронирования
+  - `PATCH /api/v1/bookings/{id}` — обновление бронирования
+  - `PATCH /api/v1/bookings/{id}/cancel` — отмена бронирования
+  - `GET /api/v1/tariffs` — справочник тарифов
+  - `GET /api/v1/tariffs/{id}` — детали тарифа
+- [x] Определение форматов запросов/ответов (Pydantic схемы)
+- [x] Коды ошибок и формат error response
+- [x] Версионирование API (`/api/v1/` префикс)
+- [x] Документирование в формате OpenAPI/Swagger
 - [ ] Актуализация `docs/data-model.md` — уточнить поля сущностей при необходимости
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] Все схемы валидируются Pydantic
-- [ ] OpenAPI документация доступна по `/docs` (Swagger UI)
-- [ ] Все endpoints имеют описание и примеры
-- [ ] Коды ошибок задокументированы
+- [x] Все схемы валидируются Pydantic
+- [x] OpenAPI документация доступна по `/docs` (Swagger UI)
+- [x] Все endpoints имеют описание и примеры
+- [x] Коды ошибок задокументированы
 
 ### Проверка пользователем
 

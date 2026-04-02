@@ -23,8 +23,8 @@ graph TB
 
 | Этап | Название | Статус |
 |------|----------|--------|
-| 0 | MVP Telegram-бот | 🚧 In Progress |
-| 1 | Backend API и база данных | 📋 Planned |
+| 0 | MVP Telegram-бот | ✅ Done |
+| 1 | Backend API и база данных | ✅ Done |
 | 2 | Веб-приложение для арендаторов | 📋 Planned |
 | 3 | Панель управления арендодателя | 📋 Planned |
 | 4 | Интеграции и автоматизация | 📋 Planned |
@@ -67,7 +67,7 @@ cp .env.example .env
 docker compose up -d postgres
 
 # 3. Применение миграций
-docker compose run --rm backend uv run alembic upgrade head
+make migrate
 
 # 4. Запуск backend
 make run-backend
@@ -84,15 +84,49 @@ make run
 ```bash
 # Backend
 make run-backend      # Запуск backend в Docker
+make run-backend-logs # Логи backend
 make stop-backend     # Остановка backend
+make build-backend    # Пересборка backend
 make test-backend     # Запуск тестов backend
-make migrate          # Применение миграций
+make lint-backend     # Линтинг backend
+make format-backend   # Форматирование backend
 
 # Database
+make migrate          # Применение миграций
+make migrate-create   # Создание новой миграции (name=<название>)
+make migrate-down     # Откат последней миграции
 make postgres-up      # Запуск PostgreSQL
 make postgres-logs    # Логи PostgreSQL
 ```
 
+### Примеры API-запросов
+
+```bash
+# Health check
+curl http://localhost:8001/health
+
+# Список домов
+curl http://localhost:8001/api/v1/houses
+
+# Создание бронирования
+curl -X POST http://localhost:8001/api/v1/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "house_id": 1,
+    "tenant_id": 1,
+    "check_in": "2024-06-01",
+    "check_out": "2024-06-03",
+    "guests_planned": [{"tariff_id": 1, "count": 2}]
+  }'
+
+# Список бронирований с фильтрами
+curl "http://localhost:8001/api/v1/bookings?house_id=1&status=confirmed"
+```
+
+---
+
 **Требования:** Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker
 
 **Перед запуском:** скопируйте `.env.example` в `.env` и заполните токены.
+
+**API Documentation:** Swagger UI доступен по адресу `http://localhost:8001/docs`

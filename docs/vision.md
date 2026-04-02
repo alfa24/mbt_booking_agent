@@ -139,19 +139,22 @@ project/
 Ключевые технические решения зафиксированы в ADR:
 
 - [ADR-001: Выбор СУБД](adr/adr-001-database.md) — PostgreSQL как основная база данных
+- [ADR-002: Backend Framework](adr/adr-002-backend-framework.md) — FastAPI + SQLAlchemy 2.0
 
 ---
 
 ## Эволюция архитектуры
 
-**MVP:** Telegram-бот с in-memory хранением
+**MVP:** Telegram-бот с in-memory хранением ✅
 
-**Phase 2:**
+**Phase 2:** Backend API и база данных ✅
 - Выделение backend API
 - Перенос логики из бота в backend
-- База данных для постоянного хранения
+- PostgreSQL для постоянного хранения
+- Alembic миграции
+- Бот работает через API
 
-**Phase 3:**
+**Phase 3:** Веб-приложения
 - Веб-приложение на базе backend API
 - Личный кабинет арендатора
 - Панель управления арендодателя

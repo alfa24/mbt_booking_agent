@@ -28,8 +28,8 @@
 
 | Итерация | Название | Цель | Статус | Tasklist |
 |----------|----------|------|--------|----------|
-| 0 | MVP Telegram-бот | Проверить гипотезу о естественноязыковом бронировании | 🚧 In Progress | [tasklist-bot.md](tasks/tasklist-bot.md) |
-| 1 | Backend API и база данных | Выделить ядро системы, добавить персистентное хранение | 📋 Planned | [tasklist-backend.md](tasks/tasklist-backend.md) |
+| 0 | MVP Telegram-бот | Проверить гипотезу о естественноязыковом бронировании | ✅ Done | [tasklist-bot.md](tasks/tasklist-bot.md) |
+| 1 | Backend API и база данных | Выделить ядро системы, добавить персистентное хранение | ✅ Done | [tasklist-backend.md](tasks/tasklist-backend.md) |
 | 2 | Веб-приложение для арендаторов | Создать личный кабинет арендатора | 📋 Planned | [tasklist-web-tenant.md](tasks/tasklist-web-tenant.md) |
 | 3 | Панель управления арендодателя | Дать полный контроль над бизнесом | 📋 Planned | [tasklist-web-owner.md](tasks/tasklist-web-owner.md) |
 | 4 | Интеграции и автоматизация | Добавить платежи и защиту от сбоев | 📋 Planned | [tasklist-integrations.md](tasks/tasklist-integrations.md) |

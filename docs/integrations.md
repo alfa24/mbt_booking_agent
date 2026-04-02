@@ -32,10 +32,11 @@ flowchart LR
 
 ### Backend API
 - **Сервис:** Внутренний API (`backend` сервис)
-- **Назначение:** Хранение бронирований, домов, пользователей в PostgreSQL
-- **Направление:** Out (бот вызывает API backend)
-- **Протокол:** HTTP REST API (внутри docker-сети)
-- **Критичность:** MVP — бот работает через backend API
+- **Назначение:** Единое ядро системы — бронирования, дома, пользователи, тарифы
+- **Направление:** Out (бот вызывает API backend), In (веб-приложения будут вызывать API)
+- **Протокол:** HTTP REST API `/api/v1/` (внутри docker-сети)
+- **Критичность:** MVP — все клиенты работают через backend API
+- **База данных:** PostgreSQL 16 (asyncpg + SQLAlchemy 2.0)
 
 ### LLM-провайдер (RouterAI)
 - **Сервис:** [routerai.ru](https://routerai.ru)
@@ -53,7 +54,8 @@ flowchart LR
 | Интеграция | Критичность | Риск | Митигация |
 |------------|-------------|------|-----------|
 | Telegram Bot API | Высокая | Блокировка, rate limits | Fallback на webhook, retry-логика |
-| Backend API | Высокая | Недоступность backend | Health checks, retry-логика в боте |
+| Backend API | Высокая | Недоступность backend | Health checks (`/health`), retry-логика в боте |
+| PostgreSQL | Высокая | Потеря данных, недоступность | Регулярные бэкапы, health checks |
 | RouterAI | Высокая | Недоступность, изменение API | Кэширование, fallback на шаблоны |
 
 **Ключевые зависимости:**

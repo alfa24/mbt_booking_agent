@@ -176,6 +176,12 @@ async def _find_house_by_name(backend: BackendClient, name: str) -> dict[str, An
     return None
 
 
+class BookingActionError(ActionError):
+    """Ошибка при создании бронирования — требует отмены reply от LLM."""
+
+    pass
+
+
 async def _create_booking(
     params: dict[str, Any], user_id: int, backend: BackendClient
 ) -> str | None:
@@ -185,7 +191,7 @@ async def _create_booking(
     # Находим дом по названию
     house = await _find_house_by_name(backend, str(params["house"]))
     if not house:
-        return "Дом не найден."
+        raise BookingActionError("Дом не найден.")
 
     # Получаем тарифы для формирования guests
     tariffs = await backend.get_tariffs()
@@ -203,7 +209,7 @@ async def _create_booking(
         )
         return None
     except BackendAPIError as e:
-        return f"Ошибка при создании бронирования: {e.message}"
+        raise BookingActionError(f"Ошибка при создании бронирования: {e.message}") from e
 
 
 async def _cancel_booking(
@@ -288,24 +294,32 @@ async def _execute_action(
     params: dict[str, Any],
     user_id: int,
     backend: BackendClient,
-) -> str | None:
-    """Выполняет действие из ответа LLM. Возвращает сообщение об ошибке или None."""
+) -> tuple[str | None, bool]:
+    """Выполняет действие из ответа LLM.
+
+    Returns:
+        tuple: (сообщение об ошибке или None, флаг отмены reply от LLM)
+    """
     if not action or action == "null":
-        return None
+        return None, False
 
     handler = ACTION_DISPATCH.get(action)
     if not handler:
         logger.warning("Неизвестное действие: %s", action)
-        return None
+        return None, False
 
     try:
-        return await handler(params, user_id, backend)
+        error = await handler(params, user_id, backend)
+        return error, False
+    except BookingActionError as e:
+        logger.warning("Ошибка бронирования %s: %s", action, e.message)
+        return e.message, True
     except ActionError as e:
         logger.warning("Ошибка валидации действия %s: %s", action, e.message)
-        return e.message
+        return e.message, False
     except Exception:
         logger.exception("Неожиданная ошибка выполнения действия %s", action)
-        return "Ошибка при выполнении действия."
+        return "Ошибка при выполнении действия.", False
 
 
 # ---------------------------------------------------------------------------
@@ -405,14 +419,17 @@ async def handle_message(
     parsed = _parse_llm_response(llm_response)
     reply = parsed.get("reply", "")
 
-    error = await _execute_action(
+    error, cancel_reply = await _execute_action(
         parsed.get("action"),
         parsed.get("params", {}),
         user["id"],
         backend,
     )
     if error:
-        reply = f"{reply}\n\n{error}" if reply else error
+        if cancel_reply:
+            reply = error
+        else:
+            reply = f"{reply}\n\n{error}" if reply else error
 
     if reply:
         await message.answer(reply)

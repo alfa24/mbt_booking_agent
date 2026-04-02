@@ -6,23 +6,69 @@ import pytest
 class TestCreateBooking:
     """Tests for POST /api/v1/bookings"""
 
+    async def _create_test_data(self, client):
+        """Helper to create user, house, and tariff for tests."""
+        # Create user
+        user_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_user",
+                "name": "Booking Test User",
+                "role": "tenant",
+            },
+        )
+        user = user_response.json()
+        
+        # Create house owner
+        owner_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_owner",
+                "name": "Booking Test Owner",
+                "role": "owner",
+            },
+        )
+        owner = owner_response.json()
+        
+        # Create house
+        house_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "Test House",
+                "capacity": 6,
+                "owner_id": owner["id"],
+            },
+        )
+        house = house_response.json()
+        
+        # Create tariff
+        tariff_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Adult", "amount": 250},
+        )
+        tariff = tariff_response.json()
+        
+        return user, house, tariff
+
     @pytest.mark.asyncio
     async def test_create_booking_success(self, client):
         """Test creating a booking with valid data."""
+        user, house, tariff = await self._create_test_data(client)
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["id"] == 1
-        assert data["house_id"] == 1
-        assert data["tenant_id"] == 1
+        assert data["house_id"] == house["id"]
+        assert data["tenant_id"] == user["id"]
         assert data["check_in"] == "2024-06-01"
         assert data["check_out"] == "2024-06-03"
         assert data["status"] == "pending"
@@ -32,13 +78,16 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_invalid_dates(self, client):
         """Test creating a booking with check_in >= check_out."""
+        user, house, tariff = await self._create_test_data(client)
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-03",
                 "check_out": "2024-06-01",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         assert response.status_code == 422
@@ -46,13 +95,16 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_same_date(self, client):
         """Test creating a booking with check_in == check_out."""
+        user, house, tariff = await self._create_test_data(client)
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-01",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         assert response.status_code == 422
@@ -60,10 +112,13 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_missing_guests(self, client):
         """Test creating a booking without guests."""
+        user, house, tariff = await self._create_test_data(client)
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
             },
@@ -73,10 +128,13 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_empty_guests(self, client):
         """Test creating a booking with empty guests list."""
+        user, house, tariff = await self._create_test_data(client)
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
                 "guests": [],
@@ -87,14 +145,17 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_date_conflict(self, client):
         """Test creating a booking with conflicting dates."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create first booking
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-10",
                 "check_out": "2024-06-15",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
 
@@ -102,10 +163,11 @@ class TestCreateBooking:
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-12",
                 "check_out": "2024-06-17",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
         assert response.status_code == 400
@@ -114,14 +176,39 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_different_house_no_conflict(self, client):
         """Test that bookings for different houses don't conflict."""
+        user, house1, tariff = await self._create_test_data(client)
+        
+        # Create owner for second house
+        owner2_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "owner2_user",
+                "name": "Owner 2",
+                "role": "owner",
+            },
+        )
+        owner2 = owner2_response.json()
+        
+        # Create second house
+        house2_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "House 2",
+                "capacity": 6,
+                "owner_id": owner2["id"],
+            },
+        )
+        house2 = house2_response.json()
+        
         # Create booking for house 1
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house1["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-10",
                 "check_out": "2024-06-15",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
 
@@ -129,10 +216,11 @@ class TestCreateBooking:
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 2,
+                "house_id": house2["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-12",
                 "check_out": "2024-06-17",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
         assert response.status_code == 201
@@ -140,16 +228,33 @@ class TestCreateBooking:
     @pytest.mark.asyncio
     async def test_create_booking_amount_calculation(self, client):
         """Test amount calculation for different guest types."""
+        user, house, tariff_adult = await self._create_test_data(client)
+        
+        # Create child tariff (free)
+        tariff_child_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Child", "amount": 0},
+        )
+        tariff_child = tariff_child_response.json()
+        
+        # Create regular tariff
+        tariff_regular_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Regular", "amount": 150},
+        )
+        tariff_regular = tariff_regular_response.json()
+        
         response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
                 "guests": [
-                    {"tariff_id": 1, "count": 2},  # Children: free
-                    {"tariff_id": 2, "count": 2},  # Adults: 250 each
-                    {"tariff_id": 3, "count": 1},  # Regular: 150
+                    {"tariff_id": tariff_child["id"], "count": 2},  # Children: free
+                    {"tariff_id": tariff_adult["id"], "count": 2},  # Adults: 250 each
+                    {"tariff_id": tariff_regular["id"], "count": 1},  # Regular: 150
                 ],
             },
         )
@@ -161,17 +266,64 @@ class TestCreateBooking:
 class TestGetBooking:
     """Tests for GET /api/v1/bookings/{id}"""
 
+    async def _create_test_data(self, client):
+        """Helper to create user, house, and tariff for tests."""
+        # Create user
+        user_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_user",
+                "name": "Booking Test User",
+                "role": "tenant",
+            },
+        )
+        user = user_response.json()
+        
+        # Create house owner
+        owner_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_owner",
+                "name": "Booking Test Owner",
+                "role": "owner",
+            },
+        )
+        owner = owner_response.json()
+        
+        # Create house
+        house_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "Test House",
+                "capacity": 6,
+                "owner_id": owner["id"],
+            },
+        )
+        house = house_response.json()
+        
+        # Create tariff
+        tariff_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Adult", "amount": 250},
+        )
+        tariff = tariff_response.json()
+        
+        return user, house, tariff
+
     @pytest.mark.asyncio
     async def test_get_booking_success(self, client):
         """Test getting an existing booking."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create booking first
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -181,7 +333,7 @@ class TestGetBooking:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == booking_id
-        assert data["house_id"] == 1
+        assert data["house_id"] == house["id"]
 
     @pytest.mark.asyncio
     async def test_get_booking_not_found(self, client):
@@ -193,6 +345,73 @@ class TestGetBooking:
 
 class TestListBookings:
     """Tests for GET /api/v1/bookings"""
+
+    async def _create_test_data(self, client):
+        """Helper to create user, house, and tariff for tests."""
+        # Create user
+        user_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_user",
+                "name": "Booking Test User",
+                "role": "tenant",
+            },
+        )
+        user = user_response.json()
+        
+        # Create house owner
+        owner_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_owner",
+                "name": "Booking Test Owner",
+                "role": "owner",
+            },
+        )
+        owner = owner_response.json()
+        
+        # Create house
+        house_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "Test House",
+                "capacity": 6,
+                "owner_id": owner["id"],
+            },
+        )
+        house = house_response.json()
+        
+        # Create tariff
+        tariff_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Adult", "amount": 250},
+        )
+        tariff = tariff_response.json()
+        
+        return user, house, tariff
+
+    async def _create_second_house(self, client, user):
+        """Helper to create a second house."""
+        # Create another owner
+        owner2_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "owner2_user",
+                "name": "Owner 2",
+                "role": "owner",
+            },
+        )
+        owner2 = owner2_response.json()
+        
+        house2_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "House 2",
+                "capacity": 6,
+                "owner_id": owner2["id"],
+            },
+        )
+        return house2_response.json()
 
     @pytest.mark.asyncio
     async def test_list_bookings_empty(self, client):
@@ -206,23 +425,28 @@ class TestListBookings:
     @pytest.mark.asyncio
     async def test_list_bookings_with_data(self, client):
         """Test listing multiple bookings."""
+        user, house1, tariff = await self._create_test_data(client)
+        house2 = await self._create_second_house(client, user)
+        
         # Create two bookings
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house1["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 2,
+                "house_id": house2["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-07-01",
                 "check_out": "2024-07-03",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
 
@@ -235,43 +459,52 @@ class TestListBookings:
     @pytest.mark.asyncio
     async def test_list_bookings_filter_by_house(self, client):
         """Test filtering bookings by house_id."""
+        user, house1, tariff = await self._create_test_data(client)
+        house2 = await self._create_second_house(client, user)
+        
         # Create bookings for different houses
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house1["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 2,
+                "house_id": house2["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-07-01",
                 "check_out": "2024-07-03",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
 
-        response = await client.get("/api/v1/bookings?house_id=1")
+        response = await client.get(f"/api/v1/bookings?house_id={house1['id']}")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
-        assert data["items"][0]["house_id"] == 1
+        assert data["items"][0]["house_id"] == house1["id"]
 
     @pytest.mark.asyncio
     async def test_list_bookings_filter_by_status(self, client):
         """Test filtering bookings by status."""
+        user, house1, tariff = await self._create_test_data(client)
+        house2 = await self._create_second_house(client, user)
+        
         # Create and cancel a booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house1["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -281,10 +514,11 @@ class TestListBookings:
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 2,
+                "house_id": house2["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-07-01",
                 "check_out": "2024-07-03",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
 
@@ -297,17 +531,20 @@ class TestListBookings:
     @pytest.mark.asyncio
     async def test_list_bookings_pagination(self, client):
         """Test pagination with limit and offset."""
-        # Create multiple bookings
+        user, house, tariff = await self._create_test_data(client)
+        
+        # Create multiple bookings with non-overlapping dates
         for i in range(5):
-            await client.post(
+            response = await client.post(
                 "/api/v1/bookings",
                 json={
-                    "house_id": i + 1,
-                    "check_in": f"2024-06-{i+1:02d}",
-                    "check_out": f"2024-06-{i+3:02d}",
-                    "guests": [{"tariff_id": 2, "count": 1}],
+                    "house_id": house["id"],
+                    "check_in": f"2024-07-{i*5+1:02d}",
+                    "check_out": f"2024-07-{i*5+3:02d}",
+                    "guests": [{"tariff_id": tariff["id"], "count": 1}],
                 },
             )
+            assert response.status_code == 201
 
         response = await client.get("/api/v1/bookings?limit=2&offset=1")
         assert response.status_code == 200
@@ -321,17 +558,64 @@ class TestListBookings:
 class TestUpdateBooking:
     """Tests for PATCH /api/v1/bookings/{id}"""
 
+    async def _create_test_data(self, client):
+        """Helper to create user, house, and tariff for tests."""
+        # Create user
+        user_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_user",
+                "name": "Booking Test User",
+                "role": "tenant",
+            },
+        )
+        user = user_response.json()
+        
+        # Create house owner
+        owner_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_owner",
+                "name": "Booking Test Owner",
+                "role": "owner",
+            },
+        )
+        owner = owner_response.json()
+        
+        # Create house
+        house_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "Test House",
+                "capacity": 6,
+                "owner_id": owner["id"],
+            },
+        )
+        house = house_response.json()
+        
+        # Create tariff
+        tariff_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Adult", "amount": 250},
+        )
+        tariff = tariff_response.json()
+        
+        return user, house, tariff
+
     @pytest.mark.asyncio
     async def test_update_booking_dates(self, client):
         """Test updating booking dates."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -352,14 +636,17 @@ class TestUpdateBooking:
     @pytest.mark.asyncio
     async def test_update_booking_guests(self, client):
         """Test updating guest composition."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -368,7 +655,7 @@ class TestUpdateBooking:
         response = await client.patch(
             f"/api/v1/bookings/{booking_id}",
             json={
-                "guests": [{"tariff_id": 2, "count": 3}],
+                "guests": [{"tariff_id": tariff["id"], "count": 3}],
             },
         )
         assert response.status_code == 200
@@ -389,14 +676,17 @@ class TestUpdateBooking:
     @pytest.mark.asyncio
     async def test_update_booking_invalid_dates(self, client):
         """Test updating with invalid dates."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -414,14 +704,17 @@ class TestUpdateBooking:
     @pytest.mark.asyncio
     async def test_update_booking_date_conflict(self, client):
         """Test updating with conflicting dates."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create first booking
         await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-10",
                 "check_out": "2024-06-15",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
 
@@ -429,10 +722,11 @@ class TestUpdateBooking:
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-20",
                 "check_out": "2024-06-25",
-                "guests": [{"tariff_id": 2, "count": 1}],
+                "guests": [{"tariff_id": tariff["id"], "count": 1}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -451,17 +745,64 @@ class TestUpdateBooking:
 class TestCancelBooking:
     """Tests for DELETE /api/v1/bookings/{id}"""
 
+    async def _create_test_data(self, client):
+        """Helper to create user, house, and tariff for tests."""
+        # Create user
+        user_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_user",
+                "name": "Booking Test User",
+                "role": "tenant",
+            },
+        )
+        user = user_response.json()
+        
+        # Create house owner
+        owner_response = await client.post(
+            "/api/v1/users",
+            json={
+                "telegram_id": "booking_test_owner",
+                "name": "Booking Test Owner",
+                "role": "owner",
+            },
+        )
+        owner = owner_response.json()
+        
+        # Create house
+        house_response = await client.post(
+            "/api/v1/houses",
+            json={
+                "name": "Test House",
+                "capacity": 6,
+                "owner_id": owner["id"],
+            },
+        )
+        house = house_response.json()
+        
+        # Create tariff
+        tariff_response = await client.post(
+            "/api/v1/tariffs",
+            json={"name": "Adult", "amount": 250},
+        )
+        tariff = tariff_response.json()
+        
+        return user, house, tariff
+
     @pytest.mark.asyncio
     async def test_cancel_booking_success(self, client):
         """Test cancelling a booking."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -481,14 +822,17 @@ class TestCancelBooking:
     @pytest.mark.asyncio
     async def test_cancel_already_cancelled(self, client):
         """Test cancelling an already cancelled booking."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create and cancel booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-01",
                 "check_out": "2024-06-03",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]
@@ -502,14 +846,17 @@ class TestCancelBooking:
     @pytest.mark.asyncio
     async def test_cancelled_booking_not_in_list(self, client):
         """Test that cancelled bookings don't appear in conflict checks."""
+        user, house, tariff = await self._create_test_data(client)
+        
         # Create and cancel booking
         create_response = await client.post(
             "/api/v1/bookings",
             json={
-                "house_id": 1,
+                "house_id": house["id"],
+                "tenant_id": user["id"],
                 "check_in": "2024-06-10",
                 "check_out": "2024-06-15",
-                "guests": [{"tariff_id": 2, "count": 2}],
+                "guests": [{"tariff_id": tariff["id"], "count": 2}],
             },
         )
         booking_id = create_response.json()["id"]

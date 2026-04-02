@@ -15,6 +15,7 @@ from backend.exceptions import (
     InvalidBookingStatusError,
 )
 from backend.repositories.booking import BookingRepository
+from backend.repositories.tariff import TariffRepository
 from backend.schemas.booking import (
     BookingFilterParams,
     BookingResponse,
@@ -39,6 +40,20 @@ async def get_booking_repository(
     return BookingRepository(db)
 
 
+async def get_tariff_repository(
+    db: AsyncSession = Depends(get_db),
+) -> TariffRepository:
+    """Dependency provider for tariff repository.
+
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        TariffRepository instance with database session
+    """
+    return TariffRepository(db)
+
+
 class BookingService:
     """Service layer for booking operations.
 
@@ -49,13 +64,16 @@ class BookingService:
     def __init__(
         self,
         repository: BookingRepository = Depends(get_booking_repository),
+        tariff_repository: TariffRepository = Depends(get_tariff_repository),
     ):
-        """Initialize service with repository.
+        """Initialize service with repositories.
 
         Args:
             repository: Booking repository instance
+            tariff_repository: Tariff repository instance
         """
         self._repo = repository
+        self._tariff_repo = tariff_repository
 
     async def _check_date_conflicts(
         self,
@@ -87,11 +105,10 @@ class BookingService:
                     check_out=str(check_out),
                 )
 
-    def _calculate_amount(self, guests: List[GuestInfo]) -> int:
+    async def _calculate_amount(self, guests: List[GuestInfo]) -> int:
         """Calculate total amount for booking.
 
-        MVP: Simple calculation - 250 rubles per adult (tariff_id=2),
-        0 for children (tariff_id=1), 150 for regular guests (tariff_id=3).
+        Fetches actual tariff amounts from database.
 
         Args:
             guests: List of guest info with tariff and count
@@ -99,16 +116,10 @@ class BookingService:
         Returns:
             Total amount in rubles
         """
-        # MVP tariff rates
-        tariff_rates = {
-            1: 0,      # Child
-            2: 250,    # Adult (standard)
-            3: 150,    # Regular guest
-        }
-
         total = 0
         for guest in guests:
-            rate = tariff_rates.get(guest.tariff_id, 250)  # Default to adult rate
+            tariff = await self._tariff_repo.get(guest.tariff_id)
+            rate = tariff.amount if tariff else 0
             total += rate * guest.count
 
         return total
@@ -138,7 +149,7 @@ class BookingService:
         )
 
         # Calculate amount
-        total_amount = self._calculate_amount(request.guests)
+        total_amount = await self._calculate_amount(request.guests)
 
         # Convert GuestInfo to dict for storage
         guests_data = [
@@ -247,7 +258,7 @@ class BookingService:
         # Calculate new amount if guests changed
         new_amount = existing.total_amount
         if request.guests:
-            new_amount = self._calculate_amount(request.guests)
+            new_amount = await self._calculate_amount(request.guests)
 
         # Convert guests to dict if provided
         guests_data = None

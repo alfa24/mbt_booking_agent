@@ -130,6 +130,7 @@ async def test_house(client, test_user):
             "description": "A test house",
             "capacity": 6,
             "is_active": True,
+            "owner_id": test_user["id"],
         },
     )
     return response.json()

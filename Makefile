@@ -48,7 +48,10 @@ format-backend:
 	docker compose exec backend uv run ruff format backend/
 
 test-backend:
-	docker compose exec backend uv run pytest backend/tests/ -v
+	docker compose exec backend uv run pytest backend/tests/ -v $(ARGS)
+
+test-backend-cov: ARGS=--cov=backend --cov-report=term-missing --cov-report=html:htmlcov
+test-backend-cov: test-backend
 
 # Database commands (Docker)
 migrate:

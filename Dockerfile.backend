@@ -8,8 +8,8 @@ RUN pip install uv
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv sync
+# Install dependencies (including dev group for tests)
+RUN uv sync --group dev
 
 # Copy backend code
 COPY backend/ ./backend/

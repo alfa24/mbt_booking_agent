@@ -40,6 +40,8 @@ graph TB
 
 ## Быстрый старт
 
+### Локальная разработка (только бот)
+
 ```bash
 # Установка зависимостей
 make install
@@ -54,6 +56,43 @@ make lint
 make format
 ```
 
-**Требования:** Python 3.12+, [uv](https://docs.astral.sh/uv/)
+### Запуск полной системы (Docker)
+
+```bash
+# 1. Настройка окружения
+cp .env.example .env
+# Отредактируйте .env — добавьте TELEGRAM_BOT_TOKEN и ROUTERAI_API_KEY
+
+# 2. Запуск инфраструктуры
+docker compose up -d postgres
+
+# 3. Применение миграций
+docker compose run --rm backend uv run alembic upgrade head
+
+# 4. Запуск backend
+make run-backend
+
+# 5. Проверка backend
+curl http://localhost:8001/health
+
+# 6. Запуск бота (в другом терминале)
+make run
+```
+
+### Команды Makefile
+
+```bash
+# Backend
+make run-backend      # Запуск backend в Docker
+make stop-backend     # Остановка backend
+make test-backend     # Запуск тестов backend
+make migrate          # Применение миграций
+
+# Database
+make postgres-up      # Запуск PostgreSQL
+make postgres-logs    # Логи PostgreSQL
+```
+
+**Требования:** Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker
 
 **Перед запуском:** скопируйте `.env.example` в `.env` и заполните токены.

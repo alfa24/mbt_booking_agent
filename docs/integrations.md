@@ -15,6 +15,7 @@ flowchart LR
     end
 
     BOT <-->|HTTP| TG_API
+    BOT -->|HTTP| BACK
     BACK <-->|HTTP| LLM
 ```
 
@@ -28,6 +29,13 @@ flowchart LR
 - **Направление:** Bidirectional (in: сообщения, out: ответы)
 - **Протокол:** HTTPS, Webhook или Long Polling
 - **Критичность:** MVP — без Telegram нет продукта
+
+### Backend API
+- **Сервис:** Внутренний API (`backend` сервис)
+- **Назначение:** Хранение бронирований, домов, пользователей в PostgreSQL
+- **Направление:** Out (бот вызывает API backend)
+- **Протокол:** HTTP REST API (внутри docker-сети)
+- **Критичность:** MVP — бот работает через backend API
 
 ### LLM-провайдер (RouterAI)
 - **Сервис:** [routerai.ru](https://routerai.ru)
@@ -45,6 +53,7 @@ flowchart LR
 | Интеграция | Критичность | Риск | Митигация |
 |------------|-------------|------|-----------|
 | Telegram Bot API | Высокая | Блокировка, rate limits | Fallback на webhook, retry-логика |
+| Backend API | Высокая | Недоступность backend | Health checks, retry-логика в боте |
 | RouterAI | Высокая | Недоступность, изменение API | Кэширование, fallback на шаблоны |
 
 **Ключевые зависимости:**

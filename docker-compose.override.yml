@@ -1,0 +1,12 @@
+services:
+  backend:
+    ports:
+      - "8001:8000"
+
+  bot:
+    # Используем сетевой стек контейнера adguard-vpn для доступа к Telegram API
+    network_mode: container:adguard-vpn
+    environment:
+      # Бот достучится до backend через docker0 интерфейс хоста (порт 8001)
+      # 172.17.0.1 — стандартный IP docker0 на хосте
+      - BACKEND_API_URL=http://172.17.0.1:8001

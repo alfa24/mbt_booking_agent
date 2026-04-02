@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from bot.config import Settings
-from bot.services.booking import BookingService
+from bot.services.backend_client import BackendAPIError, BackendClient
 from bot.services.llm import LLMService
 
 logger = logging.getLogger(__name__)
@@ -129,33 +129,108 @@ def _parse_int(value: Any, field_name: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Диспатч действий LLM → BookingService
+# Форматирование контекста для LLM
 # ---------------------------------------------------------------------------
 
 
-def _create_booking(params: dict[str, Any], user_id: int, svc: BookingService) -> str | None:
-    """Создаёт бронирование из параметров LLM."""
-    _validate_required(params, {"house", "check_in", "check_out", "guests"})
+def _format_booking_line(booking: dict[str, Any]) -> str:
+    """Форматирует бронирование в одну строку для контекста."""
+    guests = booking.get("guests_planned", [])
+    total_guests = sum(g.get("count", 0) for g in guests)
+    return (
+        f"- [{booking['id']}] Дом {booking['house_id']}: "
+        f"{booking['check_in']} — {booking['check_out']}, "
+        f"{total_guests} чел., статус: {booking['status']}"
+    )
 
+
+async def _build_context(backend: BackendClient) -> str:
+    """Собирает контекст бронирований для LLM."""
     try:
-        svc.create(
-            house=str(params["house"]),
-            check_in=_parse_date(params["check_in"], "check_in"),
-            check_out=_parse_date(params["check_out"], "check_out"),
-            guests=_parse_int(params["guests"], "guests"),
-            user_id=user_id,
-        )
-    except ValueError as e:
-        raise ActionError(f"Ошибка в данных бронирования: {e}") from e
+        bookings = await backend.get_bookings()
+        active = [b for b in bookings if b.get("status") != "cancelled"]
+        if not active:
+            return "Нет активных бронирований."
+        return "\n".join(_format_booking_line(b) for b in active)
+    except BackendAPIError as e:
+        logger.warning("Failed to build context: %s", e.message)
+        return "Не удалось загрузить бронирования."
+
+
+# ---------------------------------------------------------------------------
+# Диспатч действий LLM → Backend API
+# ---------------------------------------------------------------------------
+
+
+async def _find_house_by_name(backend: BackendClient, name: str) -> dict[str, Any] | None:
+    """Ищет дом по названию (частичное совпадение)."""
+    houses = await backend.get_houses()
+    name_lower = name.lower()
+    for house in houses:
+        if name_lower in house.get("name", "").lower():
+            return house
+    # Если не нашли — берем первый активный
+    for house in houses:
+        if house.get("is_active", True):
+            return house
     return None
 
 
-def _cancel_booking(params: dict[str, Any], _user_id: int, svc: BookingService) -> str | None:
-    """Отменяет бронирование."""
+async def _create_booking(
+    params: dict[str, Any], user_id: int, backend: BackendClient
+) -> str | None:
+    """Создаёт бронирование через API."""
+    _validate_required(params, {"house", "check_in", "check_out", "guests"})
+
+    # Находим дом по названию
+    house = await _find_house_by_name(backend, str(params["house"]))
+    if not house:
+        return "Дом не найден."
+
+    # Получаем тарифы для формирования guests
+    tariffs = await backend.get_tariffs()
+    default_tariff = tariffs[0] if tariffs else {"id": 1}
+
+    guests_count = _parse_int(params["guests"], "guests")
+    guests = [{"tariff_id": default_tariff["id"], "count": guests_count}]
+
+    try:
+        await backend.create_booking(
+            house_id=house["id"],
+            check_in=_parse_date(params["check_in"], "check_in"),
+            check_out=_parse_date(params["check_out"], "check_out"),
+            guests=guests,
+        )
+        return None
+    except BackendAPIError as e:
+        return f"Ошибка при создании бронирования: {e.message}"
+
+
+async def _cancel_booking(
+    params: dict[str, Any], user_id: int, backend: BackendClient
+) -> str | None:
+    """Отменяет бронирование через API."""
     _validate_required(params, {"booking_id"})
 
-    result = svc.cancel(str(params["booking_id"]))
-    return None if result else "Бронирование не найдено или уже отменено."
+    booking_id = str(params["booking_id"])
+    # Пытаемся распарсить как число
+    try:
+        booking_id_int = int(booking_id)
+    except ValueError:
+        # Ищем по короткому ID в списке бронирований пользователя
+        bookings = await backend.get_bookings(user_id=user_id)
+        for b in bookings:
+            if str(b["id"]) == booking_id:
+                booking_id_int = b["id"]
+                break
+        else:
+            return f"Бронирование с ID {booking_id} не найдено."
+
+    try:
+        await backend.cancel_booking(booking_id_int)
+        return None
+    except BackendAPIError as e:
+        return f"Ошибка при отмене: {e.message}"
 
 
 def _coerce_booking_fields(params: dict[str, Any]) -> dict[str, Any]:
@@ -171,20 +246,34 @@ def _coerce_booking_fields(params: dict[str, Any]) -> dict[str, Any]:
     return coerced
 
 
-def _update_booking(params: dict[str, Any], _user_id: int, svc: BookingService) -> str | None:
-    """Обновляет поля бронирования."""
+async def _update_booking(
+    params: dict[str, Any], user_id: int, backend: BackendClient
+) -> str | None:
+    """Обновляет бронирование через API."""
     _validate_required(params, {"booking_id"})
 
     booking_id = str(params.pop("booking_id"))
+    # Пытаемся распарсить как число
+    try:
+        booking_id_int = int(booking_id)
+    except ValueError:
+        # Ищем по короткому ID в списке бронирований пользователя
+        bookings = await backend.get_bookings(user_id=user_id)
+        for b in bookings:
+            if str(b["id"]) == booking_id:
+                booking_id_int = b["id"]
+                break
+        else:
+            return f"Бронирование с ID {booking_id} не найдено."
+
     fields = _coerce_booking_fields(params)
-    logger.info(f"Update booking {booking_id} with fields: {fields}")
-    result = svc.update(booking_id, **fields)
-    if result:
-        logger.info(f"Booking {booking_id} updated successfully")
+    logger.info(f"Update booking {booking_id_int} with fields: {fields}")
+
+    try:
+        await backend.update_booking(booking_id_int, **fields)
         return None
-    else:
-        logger.warning(f"Booking {booking_id} not found for update")
-        return "Бронирование не найдено."
+    except BackendAPIError as e:
+        return f"Ошибка при обновлении: {e.message}"
 
 
 ACTION_DISPATCH: dict[str, callable] = {
@@ -194,14 +283,13 @@ ACTION_DISPATCH: dict[str, callable] = {
 }
 
 
-def _execute_action(
+async def _execute_action(
     action: str | None,
     params: dict[str, Any],
     user_id: int,
-    booking_service: BookingService,
+    backend: BackendClient,
 ) -> str | None:
     """Выполняет действие из ответа LLM. Возвращает сообщение об ошибке или None."""
-    # LLM может вернуть строку "null" вместо null
     if not action or action == "null":
         return None
 
@@ -211,7 +299,7 @@ def _execute_action(
         return None
 
     try:
-        return handler(params, user_id, booking_service)
+        return await handler(params, user_id, backend)
     except ActionError as e:
         logger.warning("Ошибка валидации действия %s: %s", action, e.message)
         return e.message
@@ -251,23 +339,42 @@ async def cmd_help(message: Message) -> None:
 
 
 @router.message(Command("bookings"))
-async def cmd_bookings(message: Message, booking_service: BookingService) -> None:
+async def cmd_bookings(message: Message, backend: BackendClient) -> None:
     """Показывает бронирования текущего пользователя."""
     if not message.from_user:
         return
-    bookings = booking_service.get_by_user(message.from_user.id)
+
+    # Получаем или создаем пользователя
+    try:
+        user = await backend.get_or_create_user_by_telegram(
+            telegram_id=str(message.from_user.id),
+            name=message.from_user.full_name or str(message.from_user.id),
+        )
+        bookings = await backend.get_bookings(user_id=user["id"])
+    except BackendAPIError as e:
+        await message.answer(f"Ошибка при загрузке бронирований: {e.message}")
+        return
+
     if not bookings:
         await message.answer("У тебя пока нет бронирований.")
         return
-    lines = "\n".join(b.format_line() for b in bookings)
-    await message.answer(f"Твои бронирования:\n{lines}")
+
+    lines = []
+    for b in bookings:
+        guests = b.get("guests_planned", [])
+        total = sum(g.get("count", 0) for g in guests)
+        lines.append(
+            f"- [{b['id']}] Дом {b['house_id']}: "
+            f"{b['check_in']} — {b['check_out']}, {total} чел."
+        )
+    await message.answer("Твои бронирования:\n" + "\n".join(lines))
 
 
 @router.message()
 async def handle_message(
     message: Message,
     settings: Settings,
-    booking_service: BookingService,
+    backend: BackendClient,
     llm_service: LLMService,
 ) -> None:
     """Основной обработчик: фильтрация, LLM, диспатч действий."""
@@ -281,17 +388,28 @@ async def handle_message(
     if not text:
         return
 
-    context = booking_service.format_context()
+    # Получаем или создаем пользователя
+    try:
+        user = await backend.get_or_create_user_by_telegram(
+            telegram_id=str(message.from_user.id),
+            name=message.from_user.full_name or str(message.from_user.id),
+        )
+    except BackendAPIError as e:
+        await message.answer(f"Ошибка подключения к серверу: {e.message}")
+        return
+
+    # Собираем контекст и отправляем в LLM
+    context = await _build_context(backend)
     llm_response = await llm_service.chat(message.chat.id, text, context)
 
     parsed = _parse_llm_response(llm_response)
     reply = parsed.get("reply", "")
 
-    error = _execute_action(
+    error = await _execute_action(
         parsed.get("action"),
         parsed.get("params", {}),
-        message.from_user.id,
-        booking_service,
+        user["id"],
+        backend,
     )
     if error:
         reply = f"{reply}\n\n{error}" if reply else error

@@ -4,10 +4,11 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
 
 from bot.config import get_settings
 from bot.handlers.message import router
-from bot.services.booking import BookingService
+from bot.services.backend_client import BackendClient
 from bot.services.llm import LLMService
 
 
@@ -21,11 +22,17 @@ def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
-    bot = Bot(token=settings.telegram_bot_token)
+    # Configure proxy if set
+    session = None
+    if settings.proxy_url:
+        session = AiohttpSession(proxy=settings.proxy_url)
+        logger.info("Using proxy: %s", settings.proxy_url)
+
+    bot = Bot(token=settings.telegram_bot_token, session=session)
     dp = Dispatcher()
 
     dp["settings"] = settings
-    dp["booking_service"] = BookingService()
+    dp["backend"] = BackendClient(settings)
     dp["llm_service"] = LLMService(settings)
 
     dp.include_router(router)

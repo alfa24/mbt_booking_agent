@@ -19,6 +19,9 @@ docker-build:
 docker-run:
 	docker compose up
 
+docker-run-no-override:
+	docker compose -f docker-compose.yaml up
+
 docker-down:
 	docker compose down
 

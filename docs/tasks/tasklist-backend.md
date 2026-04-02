@@ -33,7 +33,7 @@ Backend также интегрируется с внешними сервиса
 | 04 | Реализация API бронирований | 📋 Planned | [план](tasks/task-04-booking-api/plan.md) \| [summary](tasks/task-04-booking-api/summary.md) |
 | 05 | Реализация API домов и пользователей | ✅ Done | [план](tasks/task-05-houses-users-api/plan.md) \| [summary](tasks/task-05-houses-users-api/summary.md) |
 | 06 | Подключение PostgreSQL | 📋 Planned | [план](tasks/task-06-database/plan.md) \| [summary](tasks/task-06-database/summary.md) |
-| 07 | Рефакторинг бота для работы через API | 📋 Planned | [план](tasks/task-07-bot-refactor/plan.md) \| [summary](tasks/task-07-bot-refactor/summary.md) |
+| 07 | Рефакторинг бота для работы через API | ✅ Done | [план](tasks/task-07-bot-refactor/plan.md) \| [summary](tasks/task-07-bot-refactor/summary.md) |
 | 08 | Актуализация соглашений и документации | 📋 Planned | [план](tasks/task-08-docs-update/plan.md) \| [summary](tasks/task-08-docs-update/summary.md) |
 
 ---
@@ -386,20 +386,20 @@ curl http://localhost:8000/api/v1/bookings
 
 ### Состав работ
 
-- [ ] Создание HTTP-клиента для backend API в боте
-- [ ] Рефакторинг handlers: замена прямых вызовов на API-запросы
-- [ ] Удаление in-memory хранения из бота
-- [ ] Обработка ошибок API в боте
-- [ ] Тестирование end-to-end: бот -> backend -> БД
-- [ ] Актуализация `docs/integrations.md` — добавить схему взаимодействия бота с backend
-- [ ] Обновление `README.md` — инструкции по запуску обоих сервисов
+- [x] Создание HTTP-клиента для backend API в боте
+- [x] Рефакторинг handlers: замена прямых вызовов на API-запросы
+- [x] Удаление in-memory хранения из бота
+- [x] Обработка ошибок API в боте
+- [x] Тестирование end-to-end: бот -> backend -> БД
+- [x] Актуализация `docs/integrations.md` — добавить схему взаимодействия бота с backend
+- [x] Обновление `README.md` — инструкции по запуску обоих сервисов
 
 ### Definition of Done (самопроверка агента)
 
-- [ ] Бот запускается и подключается к backend
-- [ ] Сообщения от бота проходят через backend API
-- [ ] Данные сохраняются в БД (не в памяти бота)
-- [ ] End-to-end тест проходит: сообщение в бот -> backend -> БД -> ответ
+- [x] Бот запускается и подключается к backend
+- [x] Сообщения от бота проходят через backend API
+- [x] Данные сохраняются в БД (не в памяти бота)
+- [x] End-to-end тест проходит: сообщение в бот -> backend -> БД -> ответ
 
 ### Проверка пользователем
 

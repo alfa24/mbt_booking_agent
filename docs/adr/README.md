@@ -13,6 +13,7 @@
 |---|------|----------|--------|
 | [ADR-001](adr-001-database.md) | 2026-03-28 | Выбор СУБД | Accepted |
 | [ADR-002](adr-002-backend-framework.md) | 2026-03-30 | Выбор backend-фреймворка | Accepted |
+| [ADR-003](adr-003-database-tools.md) | 2026-04-04 | Выбор инструментов миграций и доступа к БД | Accepted |
 
 ## Шаблон ADR
 

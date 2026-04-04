@@ -1,6 +1,6 @@
 """SQLAlchemy house repository."""
 
-from typing import List, Optional
+from __future__ import annotations
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ class HouseRepository:
     async def create(
         self,
         name: str,
-        description: Optional[str],
+        description: str | None,
         capacity: int,
         is_active: bool,
         owner_id: int,
@@ -52,7 +52,7 @@ class HouseRepository:
         await self._session.refresh(house)
         return HouseResponse.model_validate(house)
 
-    async def get(self, house_id: int) -> Optional[HouseResponse]:
+    async def get(self, house_id: int) -> HouseResponse | None:
         """Get house by ID.
 
         Args:
@@ -67,14 +67,14 @@ class HouseRepository:
 
     async def get_all(
         self,
-        owner_id: Optional[int] = None,
-        is_active: Optional[bool] = None,
-        capacity_min: Optional[int] = None,
-        capacity_max: Optional[int] = None,
+        owner_id: int | None = None,
+        is_active: bool | None = None,
+        capacity_min: int | None = None,
+        capacity_max: int | None = None,
         limit: int = 20,
         offset: int = 0,
-        sort: Optional[str] = None,
-    ) -> tuple[List[HouseResponse], int]:
+        sort: str | None = None,
+    ) -> tuple[list[HouseResponse], int]:
         """Get all houses with optional filtering.
 
         Args:
@@ -129,11 +129,11 @@ class HouseRepository:
     async def update(
         self,
         house_id: int,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        capacity: Optional[int] = None,
-        is_active: Optional[bool] = None,
-    ) -> Optional[HouseResponse]:
+        name: str | None = None,
+        description: str | None = None,
+        capacity: int | None = None,
+        is_active: bool | None = None,
+    ) -> HouseResponse | None:
         """Update house fields.
 
         Args:

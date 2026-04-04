@@ -7,9 +7,9 @@ from fastapi.responses import JSONResponse
 
 from backend.config import settings
 from backend.api import api_router
+from backend.database import engine
 from backend.exceptions import (
     BookingAlreadyCancelledError,
-    BookingException,
     BookingNotFoundError,
     BookingPermissionError,
     DateConflictError,
@@ -32,10 +32,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     logger.info("Starting up Booking API...")
-    # TODO: Initialize database connection here
     yield
     logger.info("Shutting down Booking API...")
-    # TODO: Close database connection here
+    await engine.dispose()
 
 
 app = FastAPI(

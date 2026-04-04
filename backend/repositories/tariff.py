@@ -1,6 +1,6 @@
 """SQLAlchemy tariff repository."""
 
-from typing import List, Optional
+from __future__ import annotations
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +40,7 @@ class TariffRepository:
         await self._session.refresh(tariff)
         return TariffResponse.model_validate(tariff)
 
-    async def get(self, tariff_id: int) -> Optional[TariffResponse]:
+    async def get(self, tariff_id: int) -> TariffResponse | None:
         """Get tariff by ID.
 
         Args:
@@ -59,8 +59,8 @@ class TariffRepository:
         self,
         limit: int = 20,
         offset: int = 0,
-        sort: Optional[str] = None,
-    ) -> tuple[List[TariffResponse], int]:
+        sort: str | None = None,
+    ) -> tuple[list[TariffResponse], int]:
         """Get all tariffs with optional sorting and pagination.
 
         Args:
@@ -101,9 +101,9 @@ class TariffRepository:
     async def update(
         self,
         tariff_id: int,
-        name: Optional[str] = None,
-        amount: Optional[int] = None,
-    ) -> Optional[TariffResponse]:
+        name: str | None = None,
+        amount: int | None = None,
+    ) -> TariffResponse | None:
         """Update tariff fields.
 
         Args:

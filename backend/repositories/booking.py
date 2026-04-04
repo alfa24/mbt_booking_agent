@@ -1,7 +1,8 @@
 """SQLAlchemy booking repository."""
 
+from __future__ import annotations
+
 from datetime import date
-from typing import List, Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,8 +28,8 @@ class BookingRepository:
         tenant_id: int,
         check_in: date,
         check_out: date,
-        guests_planned: List[dict],
-        total_amount: Optional[int] = None,
+        guests_planned: list[dict],
+        total_amount: int | None = None,
     ) -> BookingResponse:
         """Create a new booking.
 
@@ -57,7 +58,7 @@ class BookingRepository:
         await self._session.refresh(booking)
         return BookingResponse.model_validate(booking)
 
-    async def get(self, booking_id: int) -> Optional[BookingResponse]:
+    async def get(self, booking_id: int) -> BookingResponse | None:
         """Get booking by ID.
 
         Args:
@@ -74,13 +75,13 @@ class BookingRepository:
 
     async def get_all(
         self,
-        user_id: Optional[int] = None,
-        house_id: Optional[int] = None,
-        status: Optional[BookingStatus] = None,
+        user_id: int | None = None,
+        house_id: int | None = None,
+        status: BookingStatus | None = None,
         limit: int = 20,
         offset: int = 0,
-        sort: Optional[str] = None,
-    ) -> tuple[List[BookingResponse], int]:
+        sort: str | None = None,
+    ) -> tuple[list[BookingResponse], int]:
         """Get all bookings with optional filtering.
 
         Args:
@@ -132,13 +133,13 @@ class BookingRepository:
     async def update(
         self,
         booking_id: int,
-        check_in: Optional[date] = None,
-        check_out: Optional[date] = None,
-        guests_planned: Optional[List[dict]] = None,
-        guests_actual: Optional[List[dict]] = None,
-        total_amount: Optional[int] = None,
-        status: Optional[BookingStatus] = None,
-    ) -> Optional[BookingResponse]:
+        check_in: date | None = None,
+        check_out: date | None = None,
+        guests_planned: list[dict] | None = None,
+        guests_actual: list[dict] | None = None,
+        total_amount: int | None = None,
+        status: BookingStatus | None = None,
+    ) -> BookingResponse | None:
         """Update booking fields.
 
         Args:
@@ -199,8 +200,8 @@ class BookingRepository:
     async def get_bookings_for_house(
         self,
         house_id: int,
-        exclude_booking_id: Optional[int] = None,
-    ) -> List[BookingResponse]:
+        exclude_booking_id: int | None = None,
+    ) -> list[BookingResponse]:
         """Get all bookings for a specific house.
 
         Args:

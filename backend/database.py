@@ -8,8 +8,10 @@ from backend.config import settings
 # Create async engine
 engine = create_async_engine(
     settings.database_url,
-    echo=True,
+    echo=settings.db_echo,
     future=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
 )
 
 # Create async session factory

@@ -1,5 +1,29 @@
 # Модель данных
 
+## Сценарии использования
+
+### Арендатор (Tenant)
+
+| Сценарий | Необходимые данные |
+|----------|-------------------|
+| Просмотр списка домов | House: id, name, description, capacity, is_active |
+| Просмотр деталей дома | House: все поля |
+| Просмотр календаря занятости | Booking: house_id, check_in, check_out, status |
+| Создание бронирования | Booking: все поля; Tariff: для расчёта стоимости |
+| Просмотр своих бронирований | Booking: tenant_id, фильтры по датам и статусу |
+| Отмена бронирования | Booking: id, status |
+| Фиксация результатов поездки | Booking: guests_actual; StayRecord: фактические данные |
+
+### Арендодатель (Owner)
+
+| Сценарий | Необходимые данные |
+|----------|-------------------|
+| Просмотр своих домов | House: owner_id |
+| Управление календарём доступности | House: id; Booking: блокировка дат |
+| Просмотр всех бронирований | Booking: все поля + фильтры |
+| Управление тарифами | Tariff: все поля |
+| Контроль остатков расходников | ConsumableNote: house_id, name, comment |
+
 ## Основные сущности
 
 ### User (Пользователь)
@@ -102,6 +126,108 @@ erDiagram
 - Типы гостей определяют тарифы для бронирований
 
 ---
+
+## Физическая модель (PostgreSQL)
+
+### Таблицы
+
+#### users
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| telegram_id | `TEXT` | UNIQUE, NOT NULL | ID в Telegram |
+| name | `VARCHAR(100)` | NOT NULL | Имя для отображения |
+| role | `USER_ROLE` (enum) | NOT NULL, DEFAULT 'tenant' | Роль пользователя |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата регистрации |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `UNIQUE` на telegram_id
+
+#### houses
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| name | `VARCHAR(100)` | NOT NULL | Название дома |
+| description | `TEXT` | | Описание |
+| capacity | `INTEGER` | NOT NULL, CHECK > 0 | Максимальная вместимость |
+| owner_id | `BIGINT` | FOREIGN KEY → users.id, NOT NULL | Владелец |
+| is_active | `BOOLEAN` | NOT NULL, DEFAULT true | Доступен для бронирования |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `INDEX` на owner_id (для фильтра по владельцу)
+- `INDEX` на is_active (для фильтра активных)
+
+#### bookings
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| house_id | `BIGINT` | FOREIGN KEY → houses.id, NOT NULL | Забронированный дом |
+| tenant_id | `BIGINT` | FOREIGN KEY → users.id, NOT NULL | Кто бронирует |
+| check_in | `DATE` | NOT NULL | Дата заезда |
+| check_out | `DATE` | NOT NULL, CHECK > check_in | Дата выезда |
+| guests_planned | `JSONB` | NOT NULL | Планируемый состав группы |
+| guests_actual | `JSONB` | | Фактический состав |
+| total_amount | `INTEGER` | CHECK >= 0 | Итоговая сумма (копейки) |
+| status | `BOOKING_STATUS` (enum) | NOT NULL, DEFAULT 'pending' | Статус бронирования |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `INDEX` на house_id (для фильтра по дому)
+- `INDEX` на tenant_id (для фильтра по арендатору)
+- `INDEX` на status (для фильтра по статусу)
+- `INDEX` на (check_in, check_out) (для диапазонных запросов)
+
+#### tariffs
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| name | `VARCHAR(100)` | NOT NULL | Название тарифа |
+| amount | `INTEGER` | NOT NULL, CHECK >= 0 | Стоимость (копейки) |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+
+#### consumable_notes
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| house_id | `BIGINT` | FOREIGN KEY → houses.id, NOT NULL | Дом |
+| created_by | `BIGINT` | FOREIGN KEY → users.id, NOT NULL | Кто создал |
+| name | `VARCHAR(100)` | NOT NULL | Название категории |
+| comment | `TEXT` | | Описание остатков |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `INDEX` на house_id (для фильтра по дому)
+
+### ER-диаграмма
+
+```mermaid
+erDiagram
+    USER ||--o{ HOUSE : owns
+    USER ||--o{ BOOKING : creates
+    USER ||--o{ CONSUMABLENOTE : creates
+    HOUSE ||--o{ BOOKING : has
+    HOUSE ||--o{ CONSUMABLENOTE : contains
+```
+
+### Enums
+
+```sql
+CREATE TYPE user_role AS ENUM ('tenant', 'owner', 'both');
+CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
+```
 
 ## Выбор СУБД
 

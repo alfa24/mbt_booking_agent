@@ -1,6 +1,6 @@
 """SQLAlchemy user repository."""
 
-from typing import List, Optional
+from __future__ import annotations
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,7 @@ class UserRepository:
         await self._session.refresh(user)
         return UserResponse.model_validate(user)
 
-    async def get(self, user_id: int) -> Optional[UserResponse]:
+    async def get(self, user_id: int) -> UserResponse | None:
         """Get user by ID.
 
         Args:
@@ -55,7 +55,7 @@ class UserRepository:
         user = result.scalar_one_or_none()
         return UserResponse.model_validate(user) if user else None
 
-    async def get_by_telegram_id(self, telegram_id: str) -> Optional[UserResponse]:
+    async def get_by_telegram_id(self, telegram_id: str) -> UserResponse | None:
         """Get user by Telegram ID.
 
         Args:
@@ -72,11 +72,11 @@ class UserRepository:
 
     async def get_all(
         self,
-        role: Optional[UserRole] = None,
+        role: UserRole | None = None,
         limit: int = 20,
         offset: int = 0,
-        sort: Optional[str] = None,
-    ) -> tuple[List[UserResponse], int]:
+        sort: str | None = None,
+    ) -> tuple[list[UserResponse], int]:
         """Get all users with optional filtering.
 
         Args:
@@ -122,9 +122,9 @@ class UserRepository:
     async def update(
         self,
         user_id: int,
-        name: Optional[str] = None,
-        role: Optional[UserRole] = None,
-    ) -> Optional[UserResponse]:
+        name: str | None = None,
+        role: UserRole | None = None,
+    ) -> UserResponse | None:
         """Update user fields.
 
         Args:

@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     # Database (placeholder for MVP)
     database_url: str = "postgresql+asyncpg://user:pass@localhost/booking"
 
+    # Connection pooling
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_echo: bool = False
+
     # Logging
     log_level: str = "INFO"
 

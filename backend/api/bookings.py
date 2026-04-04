@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, status
 from backend.schemas.booking import (
     BookingFilterParams,
     BookingResponse,
-    BookingStatus,
     CreateBookingRequest,
     UpdateBookingRequest,
 )

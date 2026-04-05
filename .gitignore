@@ -2,7 +2,7 @@
 .env
 .env.local
 .env.*.local
-docker-compose.override.yaml
+docker-compose.override.*
 
 # Python
 .venv/
@@ -59,6 +59,7 @@ out/
 .settings/
 *.sublime-workspace
 *.iml
+.qoder/repowiki
 
 # OS generated files
 .DS_Store

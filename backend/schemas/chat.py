@@ -54,3 +54,9 @@ class SendMessageResponse(BaseModel):
     """Response schema for sending a message to chat."""
 
     message: ChatMessageResponse = Field(..., description="The assistant's response message")
+
+
+class AudioTranscriptionResponse(BaseModel):
+    """Response schema for audio transcription."""
+
+    text: str = Field(..., description="Transcribed text from audio")

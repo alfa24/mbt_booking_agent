@@ -3,13 +3,13 @@
 import { Mic, MicOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { SpeechRecognitionError } from '@/hooks/use-speech-recognition'
+import type { AudioRecordingError } from '@/hooks/use-audio-recording'
 
 interface VoiceInputProps {
   isListening: boolean
   isProcessing: boolean
   isSupported: boolean
-  error: SpeechRecognitionError | null
+  error: AudioRecordingError | null
   onStart: () => void
   onStop: () => void
   className?: string

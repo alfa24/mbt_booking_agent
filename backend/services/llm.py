@@ -1,5 +1,6 @@
 """LLM service for backend."""
 
+import base64
 import json
 import logging
 from datetime import date
@@ -277,3 +278,76 @@ class LLMService:
         messages = self._build_messages(history, user_message, context)
         response = await self._client.chat(messages)
         return response.get("content") or FALLBACK_RESPONSE
+
+    async def transcribe_audio(self, audio_bytes: bytes, filename: str = "audio.webm") -> str:
+        """Transcribe audio to text using Whisper API via RouterAI.
+
+        Args:
+            audio_bytes: Raw audio file bytes
+            filename: Original filename with extension
+
+        Returns:
+            Transcribed text or empty string on error
+        """
+        try:
+            # Get the underlying OpenAI client
+            if isinstance(self._client, RouterAIClient):
+                client = self._client._client
+            else:
+                logger.error("Transcription requires RouterAI client")
+                return ""
+
+            # Determine audio format from filename
+            ext = filename.split(".")[-1].lower() if "." in filename else "webm"
+            format_map = {
+                "webm": "webm",
+                "mp3": "mp3",
+                "mp4": "mp4",
+                "mpeg": "mp3",
+                "mpga": "mp3",
+                "m4a": "m4a",
+                "ogg": "ogg",
+                "wav": "wav",
+                "wave": "wav",
+            }
+            audio_format = format_map.get(ext, "webm")
+
+            # Encode audio to base64
+            base64_audio = base64.b64encode(audio_bytes).decode("utf-8")
+
+            # Use chat completions API with audio input
+            response = await client.chat.completions.create(
+                model=settings.whisper_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Transcribe this audio to Russian text. Return only the transcription without any additional comments.",
+                            },
+                            {
+                                "type": "input_audio",
+                                "input_audio": {
+                                    "data": base64_audio,
+                                    "format": audio_format,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            )
+
+            # Extract transcription from response
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
+
+        except RateLimitError:
+            logger.warning("Rate limit exceeded for transcription")
+            return ""
+        except APIError as e:
+            logger.error("API ошибка транскрибации: %s", e.message)
+            return ""
+        except Exception:
+            logger.exception("Неожиданная ошибка при транскрибации аудио")
+            return ""

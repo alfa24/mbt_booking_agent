@@ -71,12 +71,22 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   }, [])
 
   const start = useCallback(() => {
+    console.log('[SpeechRecognition] start() called')
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    console.log('[SpeechRecognition] SpeechRecognition available:', !!SpeechRecognition)
 
     if (!SpeechRecognition) {
+      console.error('[SpeechRecognition] not supported')
       setError('unsupported')
       return
     }
+
+    // Check for HTTPS or localhost
+    const isSecureContext = window.isSecureContext
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    console.log('[SpeechRecognition] isSecureContext:', isSecureContext)
+    console.log('[SpeechRecognition] isLocalhost:', isLocalhost)
+    console.log('[SpeechRecognition] hostname:', window.location.hostname)
 
     // Reset state
     setError(null)
@@ -91,16 +101,25 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
+      console.log('[SpeechRecognition] onstart')
       setIsListening(true)
       setIsProcessing(false)
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      console.log('[SpeechRecognition] onresult event:', event)
+      console.log('[SpeechRecognition] results length:', event.results.length)
+      console.log('[SpeechRecognition] resultIndex:', event.resultIndex)
+
       let finalTranscript = ''
       let interimTranscript = ''
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i]
+        console.log(`[SpeechRecognition] result[${i}]:`, result)
+        console.log(`[SpeechRecognition] result[${i}].isFinal:`, result.isFinal)
+        console.log(`[SpeechRecognition] result[${i}].transcript:`, result[0]?.transcript)
+        console.log(`[SpeechRecognition] result[${i}].confidence:`, result[0]?.confidence)
         if (result.isFinal) {
           finalTranscript += result[0].transcript
         } else {
@@ -108,14 +127,20 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         }
       }
 
+      console.log('[SpeechRecognition] finalTranscript:', finalTranscript)
+      console.log('[SpeechRecognition] interimTranscript:', interimTranscript)
+
       setTranscript((prev) => {
         const newTranscript = finalTranscript || interimTranscript
-        return prev ? `${prev} ${newTranscript}`.trim() : newTranscript
+        const result = prev ? `${prev} ${newTranscript}`.trim() : newTranscript
+        console.log('[SpeechRecognition] setTranscript result:', result)
+        return result
       })
     }
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       const errorType = event.error as SpeechRecognitionError
+      console.error('[SpeechRecognition] onerror:', errorType, event)
       setError(errorType)
       setIsListening(false)
       setIsProcessing(false)
@@ -137,6 +162,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     }
 
     recognition.onend = () => {
+      console.log('[SpeechRecognition] onend')
       setIsListening(false)
       setIsProcessing(false)
     }

@@ -111,7 +111,8 @@ class TextToSQLService:
         Raises:
             ValueError: If query contains dangerous operations
         """
-        sql_upper = sql.upper().strip()
+        sql = self._clean_sql(sql)
+        sql_upper = sql.upper()
 
         # Must start with SELECT
         if not sql_upper.startswith("SELECT"):
@@ -127,6 +128,24 @@ class TextToSQLService:
             if schema in sql.lower():
                 raise ValueError(f"Access to system schema '{schema}' is forbidden")
 
+    def _clean_sql(self, sql: str) -> str:
+        """Clean and normalize SQL query.
+
+        Args:
+            sql: SQL query
+
+        Returns:
+            Cleaned SQL query
+        """
+        # Remove common LLM artifacts
+        sql = sql.strip()
+        # Remove trailing quotes, commas, and other artifacts
+        sql = re.sub(r'["\',]+$', '', sql)
+        # Remove markdown code block remnants
+        sql = re.sub(r'```\w*$', '', sql)
+        sql = re.sub(r'^\s*```\w*', '', sql)
+        return sql.strip()
+
     def _add_limit(self, sql: str) -> str:
         """Add LIMIT clause if not present.
 
@@ -136,10 +155,10 @@ class TextToSQLService:
         Returns:
             SQL query with LIMIT clause
         """
-        sql_stripped = sql.strip()
-        if not re.search(r"\bLIMIT\s+\d+\b", sql_stripped, re.IGNORECASE):
-            sql_stripped = f"{sql_stripped.rstrip(';')} LIMIT 1000"
-        return sql_stripped
+        sql = self._clean_sql(sql)
+        if not re.search(r"\bLIMIT\s+\d+\b", sql, re.IGNORECASE):
+            sql = f"{sql.rstrip(';')} LIMIT 1000"
+        return sql
 
     async def generate_sql(self, question: str) -> dict[str, str]:
         """Generate SQL from natural language question.
@@ -161,19 +180,20 @@ class TextToSQLService:
         try:
             # Try to parse as JSON
             result = json.loads(content)
+            sql = self._clean_sql(result.get("sql", ""))
             return {
-                "sql": result.get("sql", ""),
+                "sql": sql,
                 "explanation": result.get("explanation", ""),
             }
         except json.JSONDecodeError:
             # Fallback: try to extract SQL from markdown code blocks
             sql_match = re.search(r"```sql\n(.*?)\n```", content, re.DOTALL)
             if sql_match:
-                sql = sql_match.group(1).strip()
+                sql = self._clean_sql(sql_match.group(1))
             else:
                 # Try to find SQL starting with SELECT
-                sql_match = re.search(r"(SELECT\s+.*?)(?:\n|$)", content, re.DOTALL | re.IGNORECASE)
-                sql = sql_match.group(1).strip() if sql_match else ""
+                sql_match = re.search(r"(SELECT\s+.*?)(?:;|\n\n|$)", content, re.DOTALL | re.IGNORECASE)
+                sql = self._clean_sql(sql_match.group(1)) if sql_match else ""
 
             return {
                 "sql": sql,

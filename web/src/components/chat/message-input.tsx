@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
+import { useAudioRecording } from '@/hooks/use-audio-recording'
 import { VoiceInput, VoiceInputIndicator } from './voice-input'
 import { DataQueryInputIndicator, type QueryMode } from './data-query-mode'
 
@@ -36,7 +36,7 @@ export function MessageInput({
     start,
     stop,
     reset,
-  } = useSpeechRecognition()
+  } = useAudioRecording()
 
   // Update content when transcript changes
   useEffect(() => {

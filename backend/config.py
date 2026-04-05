@@ -39,6 +39,10 @@ class Settings(BaseSettings):
         default="openrouter/qwen/qwen3-max-thinking",
         validation_alias=AliasChoices("LLM_MODEL"),
     )
+    whisper_model: str = Field(
+        default="google/gemini-3.1-pro-preview",
+        validation_alias=AliasChoices("WHISPER_MODEL"),
+    )
     system_prompt: str = """\
 Ты — бот для бронирования загородных домов. Ты управляешь домами с максимальной вместимостью 16 человек.
 

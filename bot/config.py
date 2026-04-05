@@ -44,7 +44,7 @@ DEFAULT_SYSTEM_PROMPT = """\
 class Settings(BaseSettings):
     """Настройки приложения, загружаемые из .env."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     telegram_bot_token: str
     bot_username: str

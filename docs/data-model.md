@@ -24,6 +24,15 @@
 | Управление тарифами | Tariff: все поля |
 | Контроль остатков расходников | ConsumableNote: house_id, name, comment |
 
+### Общие сценарии (чат и ассистент)
+
+| Сценарий | Необходимые данные |
+|----------|-------------------|
+| Создание чата с ассистентом | Chat: user_id, title |
+| Отправка сообщения | ChatMessage: chat_id, role, content |
+| Просмотр истории чата | ChatMessage: chat_id, role, content, created_at |
+| Text-to-SQL запрос | ChatMessage + LLM-генерация SQL |
+
 ## Основные сущности
 
 ### User (Пользователь)
@@ -94,6 +103,32 @@
 - `comment` — свободное описание ("6 пачек", "5 булок хлеба, 6 банок тушенки")
 - `created_at` — дата создания
 
+### Chat (Чат)
+Диалог пользователя с ассистентом. Каждый пользователь может иметь несколько чатов.
+
+**Поля:**
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | Integer (PK) | Уникальный идентификатор |
+| `user_id` | Integer (FK) | Владелец чата (ссылка на users.id) |
+| `title` | String(200) | Заголовок чата (опционально) |
+| `created_at` | DateTime | Дата создания (автоматически) |
+| `updated_at` | DateTime | Дата последнего обновления |
+
+### ChatMessage (Сообщение чата)
+Отдельное сообщение в чате. Принадлежит роли: user, assistant или system.
+
+**Поля:**
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | Integer (PK) | Уникальный идентификатор |
+| `chat_id` | Integer (FK) | Чат, к которому относится сообщение |
+| `role` | String(20) | Роль: `user` / `assistant` / `system` |
+| `content` | Text | Текст сообщения |
+| `created_at` | DateTime | Дата создания (автоматически) |
+
 ### StayRecord (Запись о проживании)
 Фактические результаты поездки — фиксируется после выезда.
 
@@ -115,6 +150,8 @@ erDiagram
     HOUSE ||--o{ CONSUMABLE : contains
     BOOKING ||--o| STAY_RECORD : results_in
     GUEST_TYPE ||--o{ BOOKING : defines_tariff
+    USER ||--o{ CHAT : has
+    CHAT ||--o{ CHAT_MESSAGE : contains
 ```
 
 **Ключевые связи:**
@@ -124,6 +161,8 @@ erDiagram
 - Дом имеет историю заметок о расходниках
 - Бронирование может иметь одну запись о фактическом проживании
 - Типы гостей определяют тарифы для бронирований
+- Пользователь может иметь несколько чатов с ассистентом
+- Каждый чат содержит историю сообщений
 
 ---
 
@@ -211,6 +250,34 @@ erDiagram
 - `PRIMARY KEY` на id
 - `INDEX` на house_id (для фильтра по дому)
 
+#### chats
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| user_id | `BIGINT` | FOREIGN KEY → users.id, NOT NULL | Владелец чата |
+| title | `VARCHAR(200)` | | Заголовок чата |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+| updated_at | `TIMESTAMPTZ` | | Дата последнего обновления |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `INDEX` на user_id (для фильтра по пользователю)
+
+#### chat_messages
+
+| Поле | Тип PostgreSQL | Constraints | Описание |
+|------|----------------|-------------|----------|
+| id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
+| chat_id | `BIGINT` | FOREIGN KEY → chats.id, NOT NULL | Чат сообщения |
+| role | `VARCHAR(20)` | NOT NULL | Роль: user/assistant/system |
+| content | `TEXT` | NOT NULL | Текст сообщения |
+| created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
+
+**Индексы:**
+- `PRIMARY KEY` на id
+- `INDEX` на chat_id (для фильтра по чату)
+
 ### ER-диаграмма
 
 ```mermaid
@@ -218,8 +285,10 @@ erDiagram
     USER ||--o{ HOUSE : owns
     USER ||--o{ BOOKING : creates
     USER ||--o{ CONSUMABLENOTE : creates
+    USER ||--o{ CHAT : has
     HOUSE ||--o{ BOOKING : has
     HOUSE ||--o{ CONSUMABLENOTE : contains
+    CHAT ||--o{ CHATMESSAGE : contains
 ```
 
 ### Enums

@@ -59,7 +59,7 @@ out/
 .settings/
 *.sublime-workspace
 *.iml
-.qoder/repowiki
+.qoder/repowiki/
 
 # OS generated files
 .DS_Store

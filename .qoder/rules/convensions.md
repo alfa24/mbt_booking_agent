@@ -142,7 +142,7 @@ backend/
 
 ### Запуск и разработка
 
-**Все операции через Docker:**
+**Все операции только через Docker:**
 
 ```bash
 # Запуск инфраструктуры
@@ -160,3 +160,88 @@ make test-backend
 # Линтинг
 make lint-backend
 ```
+
+> ⚠️ **Важно:** Проект и тесты запускаются только в Docker-контейнерах. Локальный запуск вне контейнера не поддерживается.
+
+## Frontend
+
+### Технологический стек
+
+| Компонент | Технология |
+|-----------|------------|
+| Framework | Next.js 15 (App Router) + React 19 |
+| Язык | TypeScript 5 |
+| UI Library | shadcn/ui |
+| Styling | Tailwind CSS v4 |
+| Пакетный менеджер | pnpm |
+| State Management | Zustand |
+| Data Fetching | TanStack Query (React Query) |
+| HTTP Client | ky |
+| Icons | Lucide React |
+| Date Handling | date-fns |
+| Charts | recharts |
+
+### Структура
+
+```
+web/
+├── src/
+│   ├── app/                 # Next.js App Router страницы
+│   │   ├── layout.tsx       # Корневой layout
+│   │   ├── page.tsx         # Страница входа
+│   │   ├── dashboard/       # Панель арендодателя
+│   │   ├── leaderboard/     # Лидерборд
+│   │   └── chat/            # Полноэкранный чат
+│   ├── components/          # React компоненты
+│   │   ├── ui/              # shadcn/ui компоненты
+│   │   ├── dashboard/       # Компоненты дашборда
+│   │   ├── leaderboard/     # Компоненты лидерборда
+│   │   └── chat/            # Компоненты чата
+│   ├── hooks/               # Custom React hooks
+│   ├── lib/                 # Утилиты и API клиент
+│   ├── store/               # Zustand stores
+│   └── types/               # TypeScript типы
+├── public/                  # Статические файлы
+├── package.json
+├── next.config.mjs
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+### Компоненты
+
+| Компонент | Паттерн | Пример |
+|-----------|---------|--------|
+| Страница | `app/{route}/page.tsx` | `app/dashboard/page.tsx` |
+| Layout | `app/{route}/layout.tsx` | `app/dashboard/layout.tsx` |
+| UI компонент | `components/ui/{name}.tsx` | `components/ui/button.tsx` |
+| Feature компонент | `components/{domain}/{name}.tsx` | `components/dashboard/kpi-cards.tsx` |
+| Hook | `hooks/use-{name}.ts` | `hooks/use-chat.ts` |
+| Store | `store/{name}.ts` | `store/auth.ts` |
+| API функция | `lib/api/{domain}.ts` | `lib/api/bookings.ts` |
+
+### Конвенции React
+
+- **Server Components** по умолчанию, **Client Components** только при необходимости (useState, useEffect, события)
+- `'use client'` директива в начале файла для Client Components
+- Асинхронные компоненты для data fetching на сервере
+- Zustand для глобального состояния (авторизация, UI state)
+- TanStack Query для server state (кэширование, refetch)
+
+### Запуск и разработка
+
+```bash
+# Установка зависимостей
+make install-frontend
+
+# Запуск dev-сервера
+make run-frontend
+
+# Сборка production
+make build-frontend
+
+# Линтинг
+make lint-frontend
+```
+
+> ⚠️ **Важно:** Frontend запускается в Docker-контейнере. Используйте `make run-frontend` для запуска через Docker.

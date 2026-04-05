@@ -3,6 +3,20 @@ services:
     ports:
       - "8001:8000"
 
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: deps
+    command: npm run dev
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
+
   bot:
     # Используем сетевой стек контейнера adguard-vpn для доступа к Telegram API
     network_mode: container:adguard-vpn

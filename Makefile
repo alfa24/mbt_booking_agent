@@ -1,5 +1,6 @@
 .PHONY: install run lint format docker-build docker-run docker-down docker-restart
 .PHONY: run-backend run-backend-logs stop-backend build-backend lint-backend format-backend test-backend
+.PHONY: install-frontend run-frontend build-frontend lint-frontend
 
 install:
 	uv sync
@@ -68,3 +69,20 @@ postgres-up:
 
 postgres-logs:
 	docker compose logs postgres -f
+
+# Frontend commands
+install-frontend:
+	cd web && npm install
+
+run-frontend:
+	docker compose up web
+
+build-frontend:
+	cd web && npm run build
+
+lint-frontend:
+	cd web && npm run lint
+
+# Fixtures commands (Docker)
+backend-fixtures:
+	docker compose exec backend uv run python -m backend.fixtures.load_fixtures

@@ -8,8 +8,16 @@ export const api = ky.create({
 export interface User {
   id: number
   telegram_id: string
-  first_name: string | null
-  last_name: string | null
+  name: string
+  role?: string
+  created_at?: string
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
 }
 
 export class ApiError extends Error {
@@ -27,6 +35,6 @@ export async function getUserByTelegramId(telegramId: string): Promise<User | nu
     throw new ApiError('Failed to load user')
   }
   
-  const users = await response.json<User[]>()
-  return users.length > 0 ? users[0] : null
+  const data = await response.json<PaginatedResponse<User>>()
+  return data.items.length > 0 ? data.items[0] : null
 }

@@ -40,6 +40,13 @@ export interface BookingFilters {
   check_out_to?: string
 }
 
+interface PaginatedBookingsResponse {
+  items: Booking[]
+  total: number
+  limit: number
+  offset: number
+}
+
 async function fetchBookings(filters?: BookingFilters): Promise<Booking[]> {
   const searchParams = new URLSearchParams()
   
@@ -54,7 +61,8 @@ async function fetchBookings(filters?: BookingFilters): Promise<Booking[]> {
   const url = queryString ? `bookings?${queryString}` : "bookings"
   
   const response = await api.get(url)
-  return response.json<Booking[]>()
+  const data = await response.json<PaginatedBookingsResponse>()
+  return data.items
 }
 
 async function updateBooking({

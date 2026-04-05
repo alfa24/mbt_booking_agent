@@ -21,9 +21,17 @@ export interface UpdateTariffRequest {
   amount?: number
 }
 
+interface PaginatedTariffsResponse {
+  items: Tariff[]
+  total: number
+  limit: number
+  offset: number
+}
+
 async function fetchTariffs(): Promise<Tariff[]> {
   const response = await api.get("tariffs")
-  return response.json<Tariff[]>()
+  const data = await response.json<PaginatedTariffsResponse>()
+  return data.items
 }
 
 async function createTariff(data: CreateTariffRequest): Promise<Tariff> {

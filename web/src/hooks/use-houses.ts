@@ -28,9 +28,17 @@ export interface UpdateHouseRequest {
   is_active?: boolean
 }
 
+interface PaginatedHousesResponse {
+  items: House[]
+  total: number
+  limit: number
+  offset: number
+}
+
 async function fetchHouses(): Promise<House[]> {
   const response = await api.get("houses")
-  return response.json<House[]>()
+  const data = await response.json<PaginatedHousesResponse>()
+  return data.items
 }
 
 async function createHouse(data: CreateHouseRequest): Promise<House> {

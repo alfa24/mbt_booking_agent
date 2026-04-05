@@ -14,7 +14,7 @@ export function Header() {
     router.push("/")
   }
 
-  const displayName = user?.first_name || user?.telegram_id || "Пользователь"
+  const displayName = user?.name || user?.telegram_id || "Пользователь"
 
   return (
     <header className="border-b bg-card px-6 py-4">

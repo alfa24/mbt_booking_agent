@@ -25,10 +25,18 @@ export interface UpdateNoteRequest {
   comment?: string
 }
 
+interface PaginatedConsumableNotesResponse {
+  items: ConsumableNote[]
+  total: number
+  limit: number
+  offset: number
+}
+
 async function fetchConsumableNotes(houseId?: number): Promise<ConsumableNote[]> {
   const url = houseId ? `consumable-notes?house_id=${houseId}` : "consumable-notes"
   const response = await api.get(url)
-  return response.json<ConsumableNote[]>()
+  const data = await response.json<PaginatedConsumableNotesResponse>()
+  return data.items
 }
 
 async function createNote(data: CreateNoteRequest): Promise<ConsumableNote> {

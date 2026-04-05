@@ -19,7 +19,10 @@ export function useChat() {
   // Создание чата
   const createChat = useMutation({
     mutationFn: async () => {
-      const res = await api.post('chats', { json: { user_id: user?.id } }).json<{ id: number }>()
+      if (!user?.id) {
+        throw new Error('User not authenticated')
+      }
+      const res = await api.post('chats', { json: { user_id: user.id } }).json<{ id: number }>()
       return res
     },
     onSuccess: (data) => {

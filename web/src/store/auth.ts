@@ -4,8 +4,9 @@ import { persist } from 'zustand/middleware'
 export interface User {
   id: number
   telegram_id: string
-  first_name: string | null
-  last_name: string | null
+  name: string
+  role?: string
+  created_at?: string
 }
 
 interface AuthState {

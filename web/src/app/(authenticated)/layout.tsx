@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/app-shell'
-import { ChatWidget } from '@/components/chat/chat-widget'
 import { useAuthStore } from '@/store/auth'
 
 export default function AuthenticatedLayout({
@@ -27,7 +26,6 @@ export default function AuthenticatedLayout({
   return (
     <AppShell>
       {children}
-      <ChatWidget />
     </AppShell>
   )
 }

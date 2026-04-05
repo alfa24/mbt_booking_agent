@@ -24,8 +24,19 @@ export function MessageInput({
   onModeChange,
 }: MessageInputProps) {
   const [content, setContent] = useState('')
-  const { transcript, isListening, isSupported, start, stop, reset } =
-    useSpeechRecognition()
+  const [lastError, setLastError] = useState<string | null>(null)
+
+  const {
+    transcript,
+    isListening,
+    isProcessing,
+    error,
+    errorMessage,
+    isSupported,
+    start,
+    stop,
+    reset,
+  } = useSpeechRecognition()
 
   // Update content when transcript changes
   useEffect(() => {
@@ -37,6 +48,27 @@ export function MessageInput({
       reset()
     }
   }, [transcript, reset])
+
+  // Show error toast when error changes
+  useEffect(() => {
+    if (error && errorMessage && errorMessage !== lastError) {
+      toast.error(errorMessage, {
+        duration: 5000,
+        action: {
+          label: 'Повторить',
+          onClick: () => start(),
+        },
+      })
+      setLastError(errorMessage)
+    }
+  }, [error, errorMessage, lastError, start])
+
+  // Clear lastError when starting new recording
+  useEffect(() => {
+    if (isListening) {
+      setLastError(null)
+    }
+  }, [isListening])
 
   const handleSend = useCallback(() => {
     const trimmed = content.trim()
@@ -78,7 +110,11 @@ export function MessageInput({
     <div className="flex flex-col gap-2 border-t bg-background p-4">
       {/* Indicators */}
       <div className="flex items-center gap-2 px-1">
-        {isListening && <VoiceInputIndicator isListening={isListening} />}
+        <VoiceInputIndicator
+          isListening={isListening}
+          isProcessing={isProcessing}
+          transcript={transcript}
+        />
         <DataQueryInputIndicator mode={mode} />
       </div>
 
@@ -86,7 +122,9 @@ export function MessageInput({
         {/* Voice Input */}
         <VoiceInput
           isListening={isListening}
+          isProcessing={isProcessing}
           isSupported={isSupported}
+          error={error}
           onStart={start}
           onStop={stop}
         />

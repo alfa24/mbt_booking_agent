@@ -7,13 +7,17 @@ from backend.database import get_db
 from backend.dependencies import get_llm_service
 from backend.exceptions import UserNotFoundError
 from backend.repositories.chat import ChatRepository
+from backend.repositories.tariff import TariffRepository
 from backend.repositories.user import UserRepository
 from backend.schemas.chat import (
     ChatMessageResponse,
     ChatMessagesListResponse,
     ChatResponse,
 )
+from backend.services.booking import BookingService
+from backend.services.house import HouseService
 from backend.services.llm import LLMService
+from backend.services.llm_tools import BookingToolExecutor
 
 
 async def get_chat_repository(
@@ -44,6 +48,20 @@ async def get_user_repository(
     return UserRepository(db)
 
 
+async def get_tariff_repository(
+    db: AsyncSession = Depends(get_db),
+) -> TariffRepository:
+    """Dependency provider for tariff repository.
+
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        TariffRepository instance with database session
+    """
+    return TariffRepository(db)
+
+
 class ChatService:
     """Service layer for chat operations."""
 
@@ -52,6 +70,9 @@ class ChatService:
         repository: ChatRepository = Depends(get_chat_repository),
         user_repository: UserRepository = Depends(get_user_repository),
         llm_service: LLMService = Depends(get_llm_service),
+        booking_service: BookingService = Depends(),
+        house_service: HouseService = Depends(),
+        tariff_repository: TariffRepository = Depends(get_tariff_repository),
     ):
         """Initialize service with repositories.
 
@@ -59,10 +80,32 @@ class ChatService:
             repository: Chat repository instance
             user_repository: User repository instance
             llm_service: LLM service instance
+            booking_service: Booking service instance
+            house_service: House service instance
+            tariff_repository: Tariff repository instance
         """
         self._repo = repository
         self._user_repo = user_repository
         self._llm_service = llm_service
+        self._booking_service = booking_service
+        self._house_service = house_service
+        self._tariff_repo = tariff_repository
+
+    def _create_tool_executor(self, user_id: int) -> BookingToolExecutor:
+        """Create tool executor for a user.
+
+        Args:
+            user_id: User ID for booking operations
+
+        Returns:
+            BookingToolExecutor instance
+        """
+        return BookingToolExecutor(
+            booking_service=self._booking_service,
+            house_service=self._house_service,
+            tariff_repo=self._tariff_repo,
+            user_id=user_id,
+        )
 
     async def create_chat(self, user_id: int) -> ChatResponse:
         """Create a new chat with welcome message.
@@ -87,7 +130,8 @@ class ChatService:
         # Add welcome message from assistant
         welcome_msg = (
             "Привет! Я бот для бронирования загородных домов. "
-            "Просто напиши мне, что хочешь забронировать, и я всё устрою!"
+            "Могу показать доступные дома, проверить свободные даты, "
+            "создать или отменить бронирование. Чем помочь?"
         )
         await self._repo.add_message(
             chat_id=chat.id,
@@ -104,12 +148,12 @@ class ChatService:
         user_id: int,
         context: str = "",
     ) -> ChatMessageResponse:
-        """Send a message and get LLM response.
+        """Send a message and get LLM response with tool calling.
 
         Args:
             chat_id: Chat identifier
             content: User message content
-            user_id: User identifier (for verification)
+            user_id: User identifier (for verification and tool execution)
             context: Additional context about bookings
 
         Returns:
@@ -140,11 +184,15 @@ class ChatService:
             if msg.role in ("user", "assistant")
         ]
 
-        # Get LLM response
+        # Create tool executor for this user
+        tool_executor = self._create_tool_executor(user_id)
+
+        # Get LLM response with tool calling
         llm_response = await self._llm_service.process_message(
             history=history,
             user_message=content,
             context=context,
+            tool_executor=tool_executor,
         )
 
         # Save assistant message

@@ -16,10 +16,5 @@ export default function ChatPage() {
     }
   }, [chatId, isCreatingChat, createChat])
 
-  return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-3xl font-bold">Чат с ассистентом</h1>
-      <ChatLayout />
-    </div>
-  )
+  return <ChatLayout />
 }

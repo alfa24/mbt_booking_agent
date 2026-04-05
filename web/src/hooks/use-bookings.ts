@@ -24,6 +24,13 @@ export interface Booking {
   created_at: string
 }
 
+export interface CreateBookingRequest {
+  house_id: number
+  check_in: string
+  check_out: string
+  guests: GuestInfo[]
+}
+
 export interface UpdateBookingRequest {
   check_in?: string
   check_out?: string
@@ -80,6 +87,11 @@ async function cancelBooking(id: number): Promise<void> {
   await api.delete(`bookings/${id}`)
 }
 
+async function createBooking(data: CreateBookingRequest): Promise<Booking> {
+  const response = await api.post("bookings", { json: data })
+  return response.json<Booking>()
+}
+
 export function useBookings(filters?: BookingFilters) {
   return useQuery({
     queryKey: ["bookings", filters],
@@ -114,6 +126,21 @@ export function useCancelBooking() {
     },
     onError: () => {
       toast.error("Не удалось отменить бронирование")
+    },
+  })
+}
+
+export function useCreateBooking() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] })
+      toast.success("Бронирование успешно создано")
+    },
+    onError: () => {
+      toast.error("Не удалось создать бронирование")
     },
   })
 }

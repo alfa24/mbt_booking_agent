@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bot, ArrowLeft } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
@@ -15,11 +14,6 @@ import { useChat } from '@/hooks/use-chat'
 import { useDataQuery } from '@/hooks/use-data-query'
 import { DataQueryMode, type QueryMode } from './data-query-mode'
 import type { ChatMessage } from '@/types/chat'
-
-interface ConversationViewProps {
-  onBack?: () => void
-  showBackButton?: boolean
-}
 
 // Группировка сообщений по дате
 function groupMessagesByDate(messages: ChatMessage[]): Map<string, ChatMessage[]> {
@@ -53,7 +47,7 @@ function formatDateHeader(dateStr: string): string {
   return format(date, 'd MMMM', { locale: ru })
 }
 
-export function ConversationView({ onBack, showBackButton }: ConversationViewProps) {
+export function ConversationView() {
   const { messages, isLoadingMessages, sendMessage, isSending } = useChat()
   const { queryData, data, isLoading: isQueryLoading, error, reset } = useDataQuery()
   const [queryMode, setQueryMode] = useState<QueryMode>('chat')
@@ -91,16 +85,6 @@ export function ConversationView({ onBack, showBackButton }: ConversationViewPro
     <div className="flex h-full flex-col rounded-lg border bg-card">
       {/* Header */}
       <div className="flex items-center gap-3 border-b p-4">
-        {showBackButton && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="shrink-0 md:hidden"
-          >
-            <ArrowLeft data-icon className="size-5" />
-          </Button>
-        )}
         <Avatar className="size-10 shrink-0">
           <AvatarFallback className="bg-primary text-primary-foreground">
             <Bot className="size-5" />

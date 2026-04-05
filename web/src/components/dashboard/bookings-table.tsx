@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { useBookings, type Booking, type BookingStatus } from "@/hooks/use-bookings"
 import { useHouses, type House } from "@/hooks/use-houses"
+import { useAuthStore } from "@/store/auth"
 import { BookingDetailDialog } from "./booking-detail-dialog"
 
 const statusLabels: Record<BookingStatus, string> = {
@@ -43,12 +44,15 @@ const statusVariants: Record<BookingStatus, "default" | "secondary" | "outline" 
 
 export function BookingsTable() {
   const { data: houses } = useHouses()
+  const { user } = useAuthStore()
+  const isTenant = user?.role === "tenant"
+  
   const [selectedHouse, setSelectedHouse] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [viewingBooking, setViewingBooking] = useState<Booking | null>(null)
 
   const filters = {
-    house_id: selectedHouse !== "all" ? Number(selectedHouse) : undefined,
+    house_id: !isTenant && selectedHouse !== "all" ? Number(selectedHouse) : undefined,
     status: selectedStatus !== "all" ? (selectedStatus as BookingStatus) : undefined,
   }
 
@@ -75,23 +79,25 @@ export function BookingsTable() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Бронирования</CardTitle>
+          <CardTitle>{isTenant ? "Мои бронирования" : "Бронирования"}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 mb-4">
-            <Select value={selectedHouse} onValueChange={setSelectedHouse}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Все дома" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все дома</SelectItem>
-                {houses?.map((house: House) => (
-                  <SelectItem key={house.id} value={String(house.id)}>
-                    {house.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isTenant && (
+              <Select value={selectedHouse} onValueChange={setSelectedHouse}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Все дома" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все дома</SelectItem>
+                  {houses?.map((house: House) => (
+                    <SelectItem key={house.id} value={String(house.id)}>
+                      {house.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger className="w-48">

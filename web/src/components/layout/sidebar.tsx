@@ -2,29 +2,62 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Trophy, MessageCircle } from "lucide-react"
+import { LayoutDashboard, Trophy, MessageCircle, Home, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuthStore } from "@/store/auth"
 
-const navItems = [
+const ownerNavItems = [
   {
     href: "/dashboard",
-    label: "Dashboard",
+    label: "Обзор",
     icon: LayoutDashboard,
   },
   {
+    href: "/dashboard/houses",
+    label: "Дома",
+    icon: Home,
+  },
+  {
+    href: "/dashboard/bookings",
+    label: "Бронирования",
+    icon: Calendar,
+  },
+  {
     href: "/leaderboard",
-    label: "Leaderboard",
+    label: "Лидерборд",
     icon: Trophy,
   },
   {
     href: "/chat",
-    label: "Chat",
+    label: "Чат",
+    icon: MessageCircle,
+  },
+]
+
+const tenantNavItems = [
+  {
+    href: "/tenant/houses",
+    label: "Каталог домов",
+    icon: Home,
+  },
+  {
+    href: "/tenant/bookings",
+    label: "Мои бронирования",
+    icon: Calendar,
+  },
+  {
+    href: "/chat",
+    label: "Чат",
     icon: MessageCircle,
   },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { user } = useAuthStore()
+  
+  const isTenant = user?.role === "tenant"
+  const navItems = isTenant ? tenantNavItems : ownerNavItems
 
   return (
     <aside className="w-64 border-r bg-card min-h-screen">

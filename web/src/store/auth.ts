@@ -16,13 +16,44 @@ interface AuthState {
   logout: () => void
 }
 
+// Cookie names
+const ROLE_COOKIE = "user_role"
+const USER_ID_COOKIE = "user_id"
+
+// Helper to set cookie
+function setCookie(name: string, value: string, days = 7) {
+  if (typeof document === "undefined") return
+  const expires = new Date(Date.now() + days * 86400000).toUTCString()
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`
+}
+
+// Helper to delete cookie
+function deleteCookie(name: string) {
+  if (typeof document === "undefined") return
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      login: (user) => {
+        // Set cookies for middleware access
+        if (user.role) {
+          setCookie(ROLE_COOKIE, user.role)
+        }
+        setCookie(USER_ID_COOKIE, user.id.toString())
+        
+        set({ user, isAuthenticated: true })
+      },
+      logout: () => {
+        // Clear cookies
+        deleteCookie(ROLE_COOKIE)
+        deleteCookie(USER_ID_COOKIE)
+        
+        set({ user: null, isAuthenticated: false })
+      },
     }),
     { name: 'auth-storage' }
   )

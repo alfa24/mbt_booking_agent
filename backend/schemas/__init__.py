@@ -8,7 +8,27 @@ from backend.schemas.booking import (
     GuestInfo,
     UpdateBookingRequest,
 )
+from backend.schemas.chat import (
+    ChatResponse,
+    ChatMessageResponse,
+    ChatMessagesListResponse,
+    CreateChatRequest,
+    SendMessageRequest,
+)
 from backend.schemas.common import ErrorResponse, PaginatedResponse, ValidationErrorDetail
+from backend.schemas.consumable_note import (
+    ConsumableNoteResponse,
+    CreateConsumableNoteRequest,
+    UpdateConsumableNoteRequest,
+)
+from backend.schemas.dashboard import (
+    BookingsByMonth,
+    HouseStatsResponse,
+    LeaderboardResponse,
+    MonthlyRevenue,
+    OwnerDashboardResponse,
+    RevenueByHouse,
+)
 from backend.schemas.house import (
     CreateHouseRequest,
     HouseCalendarResponse,
@@ -59,4 +79,21 @@ __all__ = [
     "TariffResponse",
     "CreateTariffRequest",
     "UpdateTariffRequest",
+    # Chat
+    "ChatResponse",
+    "ChatMessageResponse",
+    "ChatMessagesListResponse",
+    "CreateChatRequest",
+    "SendMessageRequest",
+    # ConsumableNote
+    "ConsumableNoteResponse",
+    "CreateConsumableNoteRequest",
+    "UpdateConsumableNoteRequest",
+    # Dashboard
+    "OwnerDashboardResponse",
+    "MonthlyRevenue",
+    "LeaderboardResponse",
+    "RevenueByHouse",
+    "BookingsByMonth",
+    "HouseStatsResponse",
 ]

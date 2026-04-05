@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from urllib.parse import urlsplit
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -26,14 +27,22 @@ def main() -> None:
     session = None
     if settings.proxy_url:
         session = AiohttpSession(proxy=settings.proxy_url)
-        logger.info("Using proxy: %s", settings.proxy_url)
+        # Safe logging: do not expose credentials from proxy URL
+        parsed = urlsplit(settings.proxy_url)
+        safe_location = (
+            f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"
+            if parsed.hostname
+            else parsed.scheme
+        )
+        logger.info("Using proxy for Telegram Bot API: %s", safe_location)
 
     bot = Bot(token=settings.telegram_bot_token, session=session)
     dp = Dispatcher()
 
     dp["settings"] = settings
-    dp["backend"] = BackendClient(settings)
-    dp["llm_service"] = LLMService(settings)
+    backend = BackendClient(settings)
+    dp["backend"] = backend
+    dp["llm_service"] = LLMService(backend)
 
     dp.include_router(router)
 

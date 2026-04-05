@@ -1,0 +1,263 @@
+{
+  "users": [
+    {
+      "telegram_id": "demo_owner",
+      "name": "Demo Owner",
+      "role": "owner"
+    },
+    {
+      "telegram_id": "demo_tenant",
+      "name": "Demo Tenant",
+      "role": "tenant"
+    }
+  ],
+  "houses": [
+    {
+      "name": "Старый дом",
+      "description": "Уютный старый дом с камином и большой верандой. Идеален для компании до 16 человек.",
+      "capacity": 16,
+      "owner_telegram_id": "demo_owner"
+    },
+    {
+      "name": "Новый дом",
+      "description": "Современный дом с панорамными окнами и всеми удобствами. Вместимость до 16 человек.",
+      "capacity": 16,
+      "owner_telegram_id": "demo_owner"
+    },
+    {
+      "name": "Домик у озера",
+      "description": "Небольшой домик для компании до 8 человек. Рядом озеро для купания.",
+      "capacity": 8,
+      "owner_telegram_id": "demo_owner"
+    }
+  ],
+  "tariffs": [
+    {
+      "name": "Ребёнок",
+      "amount": 0
+    },
+    {
+      "name": "Взрослый",
+      "amount": 250
+    },
+    {
+      "name": "Постоянный гость",
+      "amount": 150
+    }
+  ],
+  "bookings": [
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -30,
+      "check_out_offset": -25,
+      "status": "completed",
+      "guests_planned": [
+        {"tariff_name": "Ребёнок", "count": 2},
+        {"tariff_name": "Взрослый", "count": 4}
+      ],
+      "total_amount": 3000
+    },
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -10,
+      "check_out_offset": -5,
+      "status": "confirmed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 6}
+      ],
+      "total_amount": 7500
+    },
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 5,
+      "check_out_offset": 10,
+      "status": "pending",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 4},
+        {"tariff_name": "Постоянный гость", "count": 2}
+      ],
+      "total_amount": 2800
+    },
+    {
+      "house_name": "Новый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -20,
+      "check_out_offset": -15,
+      "status": "completed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 8}
+      ],
+      "total_amount": 10000
+    },
+    {
+      "house_name": "Новый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 15,
+      "check_out_offset": 20,
+      "status": "confirmed",
+      "guests_planned": [
+        {"tariff_name": "Ребёнок", "count": 3},
+        {"tariff_name": "Взрослый", "count": 5}
+      ],
+      "total_amount": 6250
+    },
+    {
+      "house_name": "Новый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 25,
+      "check_out_offset": 30,
+      "status": "pending",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 6}
+      ],
+      "total_amount": 7500
+    },
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -45,
+      "check_out_offset": -40,
+      "status": "cancelled",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 4}
+      ],
+      "total_amount": 5000
+    },
+    {
+      "house_name": "Домик у озера",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 1,
+      "check_out_offset": 3,
+      "status": "confirmed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 4}
+      ],
+      "total_amount": 2000
+    },
+    {
+      "house_name": "Домик у озера",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 10,
+      "check_out_offset": 12,
+      "status": "pending",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 3}
+      ],
+      "total_amount": 1500
+    },
+    {
+      "house_name": "Новый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -60,
+      "check_out_offset": -55,
+      "status": "completed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 10}
+      ],
+      "total_amount": 12500
+    },
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 40,
+      "check_out_offset": 45,
+      "status": "confirmed",
+      "guests_planned": [
+        {"tariff_name": "Постоянный гость", "count": 8}
+      ],
+      "total_amount": 6000
+    },
+    {
+      "house_name": "Домик у озера",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -5,
+      "check_out_offset": -2,
+      "status": "completed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 5}
+      ],
+      "total_amount": 3750
+    },
+    {
+      "house_name": "Новый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 50,
+      "check_out_offset": 55,
+      "status": "pending",
+      "guests_planned": [
+        {"tariff_name": "Ребёнок", "count": 2},
+        {"tariff_name": "Взрослый", "count": 4}
+      ],
+      "total_amount": 5000
+    },
+    {
+      "house_name": "Старый дом",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": -15,
+      "check_out_offset": -12,
+      "status": "completed",
+      "guests_planned": [
+        {"tariff_name": "Взрослый", "count": 3}
+      ],
+      "total_amount": 2250
+    },
+    {
+      "house_name": "Домик у озера",
+      "tenant_telegram_id": "demo_tenant",
+      "check_in_offset": 30,
+      "check_out_offset": 35,
+      "status": "confirmed",
+      "guests_planned": [
+        {"tariff_name": "Постоянный гость", "count": 6}
+      ],
+      "total_amount": 4500
+    }
+  ],
+  "consumable_notes": [
+    {
+      "house_name": "Старый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Моющее средство",
+      "comment": "Закончилось, нужно купить"
+    },
+    {
+      "house_name": "Старый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Туалетная бумага",
+      "comment": "Осталось 3 рулона"
+    },
+    {
+      "house_name": "Старый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Мусорные мешки",
+      "comment": "Закуплены на месяц"
+    },
+    {
+      "house_name": "Новый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Порошок для стирки",
+      "comment": "Новая упаковка"
+    },
+    {
+      "house_name": "Новый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Губки для посуды",
+      "comment": "Нужно заменить"
+    },
+    {
+      "house_name": "Домик у озера",
+      "creator_telegram_id": "demo_owner",
+      "name": "Средство от комаров",
+      "comment": "На летний сезон"
+    },
+    {
+      "house_name": "Старый дом",
+      "creator_telegram_id": "demo_owner",
+      "name": "Соль для посудомойки",
+      "comment": "Закончилась"
+    }
+  ]
+}

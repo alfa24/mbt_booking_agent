@@ -241,3 +241,33 @@ class BackendClient:
     async def get_tariff(self, tariff_id: int) -> dict[str, Any]:
         """Получает информацию о тарифе."""
         return await self._request("GET", f"/api/v1/tariffs/{tariff_id}")
+
+    # -------------------------------------------------------------------------
+    # Chat
+    # -------------------------------------------------------------------------
+
+    async def create_chat(self, user_id: int) -> dict[str, Any]:
+        """Создаёт новый чат для пользователя."""
+        data = {"user_id": user_id}
+        return await self._request("POST", "/api/v1/chats", json=data)
+
+    async def send_chat_message(
+        self, chat_id: int, content: str, context: str = ""
+    ) -> dict[str, Any]:
+        """Отправляет сообщение в чат и получает ответ от LLM."""
+        data = {"content": content}
+        params = {}
+        if context:
+            params["context"] = context
+        return await self._request(
+            "POST", f"/api/v1/chats/{chat_id}/messages", json=data, params=params
+        )
+
+    async def get_chat_messages(
+        self, chat_id: int, cursor: str | None = None, limit: int = 50
+    ) -> dict[str, Any]:
+        """Получает историю сообщений чата."""
+        params: dict[str, Any] = {"limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+        return await self._request("GET", f"/api/v1/chats/{chat_id}/messages", params=params)

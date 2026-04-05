@@ -17,6 +17,9 @@ from bot.services.llm import LLMService
 logger = logging.getLogger(__name__)
 router = Router()
 
+# In-memory mapping of telegram_chat_id -> backend_chat_id
+_chat_mapping: dict[int, int] = {}
+
 
 # ---------------------------------------------------------------------------
 # Утилиты: фильтрация обращений
@@ -327,17 +330,78 @@ async def _execute_action(
 # ---------------------------------------------------------------------------
 
 
+async def _get_or_create_chat(
+    telegram_chat_id: int,
+    user_id: int,
+    backend: BackendClient,
+) -> int | None:
+    """Get or create backend chat for telegram chat.
+
+    Args:
+        telegram_chat_id: Telegram chat ID
+        user_id: Backend user ID
+        backend: Backend client
+
+    Returns:
+        Backend chat ID or None if failed
+    """
+    global _chat_mapping
+
+    # Check if we already have a mapping
+    if telegram_chat_id in _chat_mapping:
+        return _chat_mapping[telegram_chat_id]
+
+    try:
+        # Create new chat on backend
+        chat = await backend.create_chat(user_id=user_id)
+        backend_chat_id = chat.get("id")
+        if backend_chat_id:
+            _chat_mapping[telegram_chat_id] = backend_chat_id
+            return backend_chat_id
+    except BackendAPIError as e:
+        logger.error("Failed to create chat: %s", e.message)
+
+    return None
+
+
 @router.message(Command("start"))
-async def cmd_start(message: Message) -> None:
+async def cmd_start(message: Message, backend: BackendClient) -> None:
     """Приветствие при первом запуске."""
-    await message.answer(
-        "Привет! Я бот для бронирования загородных домов.\n\n"
-        "Просто напиши мне, что хочешь забронировать, "
-        "и я всё устрою (с шутками и подколками, конечно).\n\n"
-        "Команды:\n"
-        "/bookings — мои бронирования\n"
-        "/help — справка"
+    if not message.from_user:
+        return
+
+    # Get or create user
+    try:
+        user = await backend.get_or_create_user_by_telegram(
+            telegram_id=str(message.from_user.id),
+            name=message.from_user.full_name or str(message.from_user.id),
+        )
+    except BackendAPIError as e:
+        await message.answer(f"Ошибка подключения к серверу: {e.message}")
+        return
+
+    # Create chat on backend
+    backend_chat_id = await _get_or_create_chat(
+        telegram_chat_id=message.chat.id,
+        user_id=user["id"],
+        backend=backend,
     )
+
+    if backend_chat_id:
+        await message.answer(
+            "Привет! Я бот для бронирования загородных домов.\n\n"
+            "Просто напиши мне, что хочешь забронировать, "
+            "и я всё устрою (с шутками и подколками, конечно).\n\n"
+            "Команды:\n"
+            "/bookings — мои бронирования\n"
+            "/help — справка"
+        )
+    else:
+        await message.answer(
+            "Привет! Я бот для бронирования загородных домов.\n\n"
+            "К сожалению, не удалось подключиться к серверу. "
+            "Попробуй позже."
+        )
 
 
 @router.message(Command("help"))
@@ -392,6 +456,8 @@ async def handle_message(
     llm_service: LLMService,
 ) -> None:
     """Основной обработчик: фильтрация, LLM, диспатч действий."""
+    global _chat_mapping
+
     if not message.text or not message.from_user:
         return
 
@@ -412,9 +478,20 @@ async def handle_message(
         await message.answer(f"Ошибка подключения к серверу: {e.message}")
         return
 
-    # Собираем контекст и отправляем в LLM
+    # Получаем или создаем чат на backend
+    backend_chat_id = await _get_or_create_chat(
+        telegram_chat_id=message.chat.id,
+        user_id=user["id"],
+        backend=backend,
+    )
+
+    if not backend_chat_id:
+        await message.answer("Не удалось создать чат. Попробуй позже.")
+        return
+
+    # Собираем контекст и отправляем в LLM через backend
     context = await _build_context(backend)
-    llm_response = await llm_service.chat(message.chat.id, text, context)
+    llm_response = await llm_service.chat(backend_chat_id, text, context)
 
     parsed = _parse_llm_response(llm_response)
     reply = parsed.get("reply", "")

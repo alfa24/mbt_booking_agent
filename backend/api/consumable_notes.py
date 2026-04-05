@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.schemas.common import ErrorResponse, PaginatedResponse
 from backend.schemas.consumable_note import (
@@ -128,7 +128,10 @@ async def update_note(
     Raises:
         HTTPException: 404 if not found, 422 if validation fails
     """
-    return await service.update_note(note_id, request)
+    try:
+        return await service.update_note(note_id, request)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @consumable_notes_router.delete(
@@ -157,4 +160,7 @@ async def delete_note(
     Raises:
         HTTPException: 404 if note not found
     """
-    await service.delete_note(note_id)
+    try:
+        await service.delete_note(note_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -142,10 +142,13 @@ async def send_message(
     Raises:
         HTTPException: 404 if chat not found, 422 if validation fails
     """
-    message = await service.send_message(
-        chat_id=chat_id,
-        content=request.content,
-        user_id=user_id,
-        context=context,
-    )
-    return SendMessageResponse(message=message)
+    try:
+        message = await service.send_message(
+            chat_id=chat_id,
+            content=request.content,
+            user_id=user_id,
+            context=context,
+        )
+        return SendMessageResponse(message=message)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -73,6 +73,7 @@ class UserRepository:
     async def get_all(
         self,
         role: UserRole | None = None,
+        telegram_id: str | None = None,
         limit: int = 20,
         offset: int = 0,
         sort: str | None = None,
@@ -81,6 +82,7 @@ class UserRepository:
 
         Args:
             role: Filter by user role
+            telegram_id: Filter by Telegram ID
             limit: Number of results to return
             offset: Number of results to skip
             sort: Sort field (prefix with - for descending)
@@ -93,6 +95,9 @@ class UserRepository:
         # Apply filters
         if role is not None:
             query = query.where(User.role == role)
+
+        if telegram_id is not None:
+            query = query.where(User.telegram_id == telegram_id)
 
         # Get total count
         count_result = await self._session.execute(

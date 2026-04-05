@@ -1,8 +1,7 @@
 "use client"
 
-import { use } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Users, Calendar, ArrowLeft, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,21 +11,36 @@ import { useHouseDetails, useHouseCalendar } from "@/hooks/use-house-details"
 import { format, parseISO, isWithinInterval } from "date-fns"
 import { ru } from "date-fns/locale"
 
-interface HouseDetailsPageProps {
-  params: Promise<{
-    id: string
-  }>
-}
-
-export default function HouseDetailsPage({ params }: HouseDetailsPageProps) {
-  const { id } = use(params)
-  const houseId = parseInt(id, 10)
+export default function HouseDetailsPage() {
+  const params = useParams()
   const router = useRouter()
+  
+  // Handle params safely - useParams may return empty object on first render
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : undefined
+  const houseId = id ? parseInt(id, 10) : NaN
   
   const { data: house, isLoading: isLoadingHouse } = useHouseDetails(houseId)
   const { data: calendar, isLoading: isLoadingCalendar } = useHouseCalendar(houseId)
 
   const isLoading = isLoadingHouse || isLoadingCalendar
+  
+  // Wait for params to be available
+  if (!params || !id) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Skeleton className="h-8 w-64" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

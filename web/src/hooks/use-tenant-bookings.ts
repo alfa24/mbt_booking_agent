@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { useAuthStore } from "@/store/auth"
 
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed"
 
@@ -46,13 +47,16 @@ async function fetchUserBookings(userId: number): Promise<Booking[]> {
   return data.items
 }
 
-async function createBooking(data: CreateBookingRequest): Promise<Booking> {
-  const response = await api.post("bookings", { json: data })
+async function createBooking(data: CreateBookingRequest, tenantId: number): Promise<Booking> {
+  const response = await api.post("bookings", {
+    json: data,
+    searchParams: { tenant_id: tenantId },
+  })
   return response.json<Booking>()
 }
 
-async function cancelBooking(id: number): Promise<void> {
-  await api.delete(`bookings/${id}`)
+async function cancelBooking(id: number, tenantId: number): Promise<void> {
+  await api.delete(`bookings/${id}`, { searchParams: { tenant_id: tenantId } })
 }
 
 export function useUserBookings(userId: number | undefined) {
@@ -65,9 +69,14 @@ export function useUserBookings(userId: number | undefined) {
 
 export function useCreateBooking() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+  const tenantId = user?.id
 
   return useMutation({
-    mutationFn: createBooking,
+    mutationFn: (data: CreateBookingRequest) => {
+      if (!tenantId) throw new Error("User not authenticated")
+      return createBooking(data, tenantId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
       queryClient.invalidateQueries({ queryKey: ["houses"] })
@@ -81,9 +90,14 @@ export function useCreateBooking() {
 
 export function useCancelBooking() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+  const tenantId = user?.id
 
   return useMutation({
-    mutationFn: cancelBooking,
+    mutationFn: (id: number) => {
+      if (!tenantId) throw new Error("User not authenticated")
+      return cancelBooking(id, tenantId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
       toast.success("Бронирование отменено")

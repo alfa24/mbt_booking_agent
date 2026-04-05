@@ -104,6 +104,7 @@ class UserService:
         """
         return await self._repo.get_all(
             role=filters.role,
+            telegram_id=filters.telegram_id,
             limit=filters.limit,
             offset=filters.offset,
             sort=filters.sort,

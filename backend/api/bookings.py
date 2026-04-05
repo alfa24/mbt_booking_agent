@@ -103,6 +103,7 @@ async def get_booking(
 async def create_booking(
     request: CreateBookingRequest,
     service: Annotated[BookingService, Depends(BookingService)],
+    tenant_id: int = 1,
 ) -> BookingResponse:
     """Create a new booking.
 
@@ -112,6 +113,7 @@ async def create_booking(
     Args:
         request: Booking creation data
         service: Booking service instance
+        tenant_id: ID of the tenant making the booking (query param, default=1)
 
     Returns:
         Created booking with generated ID
@@ -119,9 +121,6 @@ async def create_booking(
     Raises:
         HTTPException: 400 if dates conflict, 422 if validation fails
     """
-    # TODO: Replace with actual auth when implementing authentication
-    # See task-05 or task-07 for JWT integration
-    tenant_id = 1
     return await service.create_booking(tenant_id, request)
 
 
@@ -154,6 +153,7 @@ async def update_booking(
     booking_id: int,
     request: UpdateBookingRequest,
     service: Annotated[BookingService, Depends(BookingService)],
+    tenant_id: int = 1,
 ) -> BookingResponse:
     """Update an existing booking.
 
@@ -164,6 +164,7 @@ async def update_booking(
         booking_id: Booking identifier
         request: Fields to update
         service: Booking service instance
+        tenant_id: ID of the tenant (for authorization check, query param, default=1)
 
     Returns:
         Updated booking
@@ -171,8 +172,6 @@ async def update_booking(
     Raises:
         HTTPException: 404 if not found, 403 if not owner, 400 if invalid
     """
-    # TODO: Replace with actual auth when implementing authentication
-    tenant_id = 1
     return await service.update_booking(booking_id, tenant_id, request)
 
 
@@ -200,6 +199,7 @@ async def update_booking(
 async def cancel_booking(
     booking_id: int,
     service: Annotated[BookingService, Depends(BookingService)],
+    tenant_id: int = 1,
 ) -> BookingResponse:
     """Cancel a booking.
 
@@ -209,6 +209,7 @@ async def cancel_booking(
     Args:
         booking_id: Booking identifier
         service: Booking service instance
+        tenant_id: ID of the tenant (for authorization check, query param, default=1)
 
     Returns:
         Cancelled booking
@@ -216,6 +217,4 @@ async def cancel_booking(
     Raises:
         HTTPException: 404 if not found, 403 if not owner, 400 if invalid status
     """
-    # TODO: Replace with actual auth when implementing authentication
-    tenant_id = 1
     return await service.cancel_booking(booking_id, tenant_id)

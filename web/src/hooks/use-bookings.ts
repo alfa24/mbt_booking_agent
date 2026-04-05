@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { useAuthStore } from "@/store/auth"
 
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed"
 
@@ -75,20 +76,28 @@ async function fetchBookings(filters?: BookingFilters): Promise<Booking[]> {
 async function updateBooking({
   id,
   data,
+  tenantId,
 }: {
   id: number
   data: UpdateBookingRequest
+  tenantId: number
 }): Promise<Booking> {
-  const response = await api.patch(`bookings/${id}`, { json: data })
+  const response = await api.patch(`bookings/${id}`, {
+    json: data,
+    searchParams: { tenant_id: tenantId },
+  })
   return response.json<Booking>()
 }
 
-async function cancelBooking(id: number): Promise<void> {
-  await api.delete(`bookings/${id}`)
+async function cancelBooking(id: number, tenantId: number): Promise<void> {
+  await api.delete(`bookings/${id}`, { searchParams: { tenant_id: tenantId } })
 }
 
-async function createBooking(data: CreateBookingRequest): Promise<Booking> {
-  const response = await api.post("bookings", { json: data })
+async function createBooking(data: CreateBookingRequest, tenantId: number): Promise<Booking> {
+  const response = await api.post("bookings", {
+    json: data,
+    searchParams: { tenant_id: tenantId },
+  })
   return response.json<Booking>()
 }
 
@@ -101,9 +110,14 @@ export function useBookings(filters?: BookingFilters) {
 
 export function useUpdateBooking() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+  const tenantId = user?.id
 
   return useMutation({
-    mutationFn: updateBooking,
+    mutationFn: ({ id, data }: { id: number; data: UpdateBookingRequest }) => {
+      if (!tenantId) throw new Error("User not authenticated")
+      return updateBooking({ id, data, tenantId })
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
       queryClient.invalidateQueries({ queryKey: ["bookings", variables.id] })
@@ -117,9 +131,14 @@ export function useUpdateBooking() {
 
 export function useCancelBooking() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+  const tenantId = user?.id
 
   return useMutation({
-    mutationFn: cancelBooking,
+    mutationFn: (id: number) => {
+      if (!tenantId) throw new Error("User not authenticated")
+      return cancelBooking(id, tenantId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
       toast.success("Бронирование отменено")
@@ -132,9 +151,14 @@ export function useCancelBooking() {
 
 export function useCreateBooking() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+  const tenantId = user?.id
 
   return useMutation({
-    mutationFn: createBooking,
+    mutationFn: (data: CreateBookingRequest) => {
+      if (!tenantId) throw new Error("User not authenticated")
+      return createBooking(data, tenantId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] })
       toast.success("Бронирование успешно создано")

@@ -55,6 +55,18 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, isAuthenticated: false })
       },
     }),
-    { name: 'auth-storage' }
+    { 
+      name: 'auth-storage',
+      onRehydrateStorage: () => (state) => {
+        // Re-set cookies when state is rehydrated from storage
+        // This ensures middleware can access the role on subsequent requests
+        if (state?.user) {
+          if (state.user.role) {
+            setCookie(ROLE_COOKIE, state.user.role)
+          }
+          setCookie(USER_ID_COOKIE, state.user.id.toString())
+        }
+      }
+    }
   )
 )

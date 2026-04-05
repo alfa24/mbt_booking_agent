@@ -69,3 +69,4 @@ class UserFilterParams(BaseModel):
 
     # Filters
     role: Optional[UserRole] = Field(None, description="Filter by role")
+    telegram_id: Optional[str] = Field(None, description="Filter by Telegram ID")

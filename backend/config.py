@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,10 +26,19 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
-    # LLM Configuration (fallback to env without prefix)
-    openai_api_key: str = ""
-    openai_base_url: str = "https://routerai.ru/api/v1"
-    llm_model: str = "openrouter/qwen/qwen3-max-thinking"
+    # LLM Configuration (uses ROUTERAI_* env vars via validation_alias)
+    openai_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("ROUTERAI_API_KEY"),
+    )
+    openai_base_url: str = Field(
+        default="https://routerai.ru/api/v1",
+        validation_alias=AliasChoices("ROUTERAI_BASE_URL"),
+    )
+    llm_model: str = Field(
+        default="openrouter/qwen/qwen3-max-thinking",
+        validation_alias=AliasChoices("LLM_MODEL"),
+    )
     system_prompt: str = """\
 Ты — бот для бронирования загородных домов. Ты управляешь домами с максимальной вместимостью 16 человек.
 

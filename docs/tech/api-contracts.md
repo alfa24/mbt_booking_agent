@@ -8,6 +8,15 @@
 - **Формат:** JSON
 - **Версионирование:** URL-based (`/api/v1/`)
 
+## Примечание об аутентификации
+
+> **TODO:** До внедрения полноценной аутентификации user ID передаются как query parameters с default=1:
+> - `tenant_id=1` — для endpoints бронирований
+> - `user_id=1` — для endpoints чатов
+> - `owner_id=1` — для endpoints домов
+> 
+> После внедрения auth эти параметры будут передаваться через заголовки авторизации (JWT token).
+
 ## Общие схемы
 
 ### ErrorResponse
@@ -161,6 +170,20 @@ Generic-обёртка для пагинированных списков:
 - 404 — пользователь не найден
 - 422 — невалидные данные
 
+---
+
+#### DELETE /users/{id}
+
+Удаление пользователя.
+
+**Path Parameters:**
+- `id` (integer, required)
+
+**Response:** 204 No Content
+
+**Errors:**
+- 404 — пользователь не найден
+
 ### Houses
 
 #### GET /houses
@@ -252,6 +275,24 @@ Generic-обёртка для пагинированных списков:
 
 **Errors:**
 - 404 — дом не найден
+
+---
+
+#### DELETE /houses/{id}
+
+Удаление дома (hard delete, необратимо).
+
+**Path Parameters:**
+- `id` (integer, required)
+
+**Query Parameters:**
+- `owner_id` (integer, required) — ID владельца для проверки прав (временно default=1)
+
+**Response:** 204 No Content
+
+**Errors:**
+- 404 — дом не найден
+- 403 — нет прав (не владелец дома)
 
 ---
 
@@ -364,6 +405,8 @@ Generic-обёртка для пагинированных списков:
 
 **Response:** `BookingResponse` (201 Created)
 
+**Примечание:** Поле `guests` в request body маппится на `guests_planned` в response.
+
 **Errors:**
 - 422 — невалидные данные
 - 409 — выбранные даты заняты
@@ -388,8 +431,7 @@ Generic-обёртка для пагинированных списков:
       "tariff_id": 1,
       "count": 3
     }
-  ],
-  "status": "cancelled"
+  ]
 }
 ```
 
@@ -402,34 +444,47 @@ Generic-обёртка для пагинированных списков:
 
 ---
 
-#### PATCH /bookings/{id}/cancel
+#### DELETE /bookings/{id}
 
-Отмена бронирования. Статус меняется на `cancelled`.
+Отмена бронирования (soft delete). Статус меняется на `cancelled`.
 
 **Path Parameters:**
 - `id` (integer, required)
 
-**Request Body:** None
+**Query Parameters:**
+- `tenant_id` (integer, required) — ID арендатора для проверки прав (временно default=1)
 
-**Response:** `BookingResponse`
+**Response:** `BookingResponse` (200 OK)
 
 ```json
 {
   "id": 1,
+  "house_id": 1,
+  "tenant_id": 123,
+  "check_in": "2024-06-01",
+  "check_out": "2024-06-05",
+  "guests_planned": [{"tariff_id": 1, "count": 2}],
+  "total_amount": 12000,
   "status": "cancelled",
-  ...
+  "created_at": "2024-05-20T10:00:00Z"
 }
 ```
 
 **Errors:**
 - 404 — бронирование не найдено
-- 409 — бронирование уже отменено или завершено
+- 403 — нет прав (не владелец бронирования)
+- 400 — бронирование уже отменено или завершено
 
 ### Tariffs
 
 #### GET /tariffs
 
 Справочник тарифов.
+
+**Query Parameters:**
+- `limit` (integer, default: 20) — количество записей
+- `offset` (integer, default: 0) — смещение
+- `sort` (string, default: "id") — сортировка
 
 **Response:** `PaginatedResponse<TariffResponse>`
 
@@ -501,6 +556,44 @@ Generic-обёртка для пагинированных списков:
 
 **Errors:**
 - 404 — тариф не найден
+
+---
+
+#### PUT /tariffs/{id}
+
+Полная замена тарифа.
+
+**Path Parameters:**
+- `id` (integer, required)
+
+**Request Body:** `CreateTariffRequest`
+
+```json
+{
+  "name": "Взрослый",
+  "amount": 3000
+}
+```
+
+**Response:** `TariffResponse`
+
+**Errors:**
+- 404 — тариф не найден
+
+---
+
+#### DELETE /tariffs/{id}
+
+Удаление тарифа.
+
+**Path Parameters:**
+- `id` (integer, required)
+
+**Response:** 204 No Content
+
+**Errors:**
+- 404 — тариф не найден
+- 409 — тариф используется в бронированиях
 
 ## Справочник схем
 
@@ -811,6 +904,8 @@ KPI и метрики для панели арендодателя.
 #### GET /chats/{id}/messages
 
 История сообщений чата (cursor-based пагинация).
+
+**Примечание:** Используется cursor-based пагинация вместо offset-based для поддержки real-time обновлений чата. Cursor позволяет эффективно загружать новые сообщения без пропусков и дубликатов.
 
 **Path Parameters:**
 - `id` (integer, required) — ID чата

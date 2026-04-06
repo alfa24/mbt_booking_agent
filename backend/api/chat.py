@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Cookie, Depends, File, HTTPException, UploadFile, status
 
 from backend.schemas.chat import (
     AudioTranscriptionResponse,
@@ -72,8 +72,7 @@ async def create_chat(
 async def get_messages(
     chat_id: int,
     service: Annotated[ChatService, Depends(ChatService)],
-    # TODO: Replace with actual auth when implementing authentication
-    user_id: int = 1,
+    user_id: int = Cookie(default=1, alias="user_id"),
     cursor: str | None = None,
     limit: int = 50,
 ) -> ChatMessagesListResponse:
@@ -125,8 +124,7 @@ async def send_message(
     chat_id: int,
     request: SendMessageRequest,
     service: Annotated[ChatService, Depends(ChatService)],
-    # TODO: Replace with actual auth when implementing authentication
-    user_id: int = 1,
+    user_id: int = Cookie(default=1, alias="user_id"),
     context: str = "",
 ) -> SendMessageResponse:
     """Send a message to the chat.

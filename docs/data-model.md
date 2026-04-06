@@ -77,7 +77,7 @@
 | `check_out` | Date | Дата выезда |
 | `guests_planned` | JSON | Планируемый состав группы: `[{"tariff_id": 1, "count": 2}]` |
 | `guests_actual` | JSON | Фактический состав (заполняется после проживания) |
-| `total_amount` | Integer | Итоговая сумма в копейках (пересчитывается после проживания) |
+| `total_amount` | Integer | Итоговая сумма в рублях (пересчитывается после проживания) |
 | `status` | Enum | Статус: `pending` / `confirmed` / `cancelled` / `completed` |
 | `created_at` | DateTime | Дата создания (автоматически)
 
@@ -90,7 +90,7 @@
 |------|-----|----------|
 | `id` | Integer (PK) | Уникальный идентификатор |
 | `name` | String(100) | Название ("Ребёнок", "Взрослый", "Постоянный гость") |
-| `amount` | Integer | Стоимость проживания в копейках (0 для бесплатных) |
+| `amount` | Integer | Стоимость проживания в рублях (0 для бесплатных) |
 | `created_at` | DateTime | Дата создания (автоматически)
 
 ### ConsumableNote (Заметка о расходниках)
@@ -104,7 +104,7 @@
 - `created_at` — дата создания
 
 ### Chat (Чат)
-Диалог пользователя с ассистентом. Каждый пользователь может иметь несколько чатов.
+Диалог пользователя с ассистентом. Каждый пользователь имеет один чат с ассистентом.
 
 **Поля:**
 
@@ -212,7 +212,7 @@ erDiagram
 | check_out | `DATE` | NOT NULL, CHECK > check_in | Дата выезда |
 | guests_planned | `JSONB` | NOT NULL | Планируемый состав группы |
 | guests_actual | `JSONB` | | Фактический состав |
-| total_amount | `INTEGER` | CHECK >= 0 | Итоговая сумма (копейки) |
+| total_amount | `INTEGER` | CHECK >= 0 | Итоговая сумма (рубли) |
 | status | `BOOKING_STATUS` (enum) | NOT NULL, DEFAULT 'pending' | Статус бронирования |
 | created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
 
@@ -229,7 +229,7 @@ erDiagram
 |------|----------------|-------------|----------|
 | id | `BIGINT GENERATED ALWAYS AS IDENTITY` | PRIMARY KEY | Уникальный идентификатор |
 | name | `VARCHAR(100)` | NOT NULL | Название тарифа |
-| amount | `INTEGER` | NOT NULL, CHECK >= 0 | Стоимость (копейки) |
+| amount | `INTEGER` | NOT NULL, CHECK >= 0 | Стоимость (рубли) |
 | created_at | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Дата создания |
 
 **Индексы:**

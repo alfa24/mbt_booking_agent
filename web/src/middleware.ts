@@ -15,8 +15,15 @@ export function middleware(request: NextRequest) {
   // Get role from cookie
   const role = request.cookies.get(ROLE_COOKIE)?.value
   
-  // Allow public routes
-  if (PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route))) {
+  // Allow public routes with exact/prefix matching
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => {
+    // Root path - exact match only
+    if (route === "/") return pathname === "/"
+    // Other routes - prefix match
+    return pathname.startsWith(route)
+  })
+  
+  if (isPublicRoute) {
     // Special handling for root path - redirect based on role
     if (pathname === "/") {
       if (role === "tenant") {
@@ -29,9 +36,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // If no role cookie, allow access (client-side auth will handle it)
+  // If no role cookie, redirect to login for protected routes
   if (!role) {
-    return NextResponse.next()
+    const loginUrl = new URL("/", request.url)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Check owner-only routes

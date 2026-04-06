@@ -365,31 +365,40 @@ async def execute_tool_call(
         JSON string result
     """
     try:
-        if tool_name == "list_available_houses":
+        # Support alternative tool names
+        normalized_name = tool_name
+        if tool_name in ("list_bookings", "get_bookings", "my_bookings"):
+            normalized_name = "get_my_bookings"
+        
+        if normalized_name == "list_available_houses":
             result = await executor.list_available_houses()
-        elif tool_name == "check_availability":
+        elif normalized_name == "check_availability":
             result = await executor.check_availability(
                 house_id=tool_args["house_id"],
                 check_in=tool_args["check_in"],
                 check_out=tool_args["check_out"],
             )
-        elif tool_name == "create_booking":
+        elif normalized_name == "create_booking":
             result = await executor.create_booking(
                 house_id=tool_args["house_id"],
                 check_in=tool_args["check_in"],
                 check_out=tool_args["check_out"],
                 guests_count=tool_args["guests_count"],
             )
-        elif tool_name == "cancel_booking":
+        elif normalized_name == "cancel_booking":
             result = await executor.cancel_booking(
                 booking_id=tool_args["booking_id"],
             )
-        elif tool_name == "get_my_bookings":
+        elif normalized_name == "get_my_bookings":
             result = await executor.get_my_bookings()
         else:
-            result = {"error": f"Unknown tool: {tool_name}"}
+            logger.warning("Unknown tool: %s (normalized: %s)", tool_name, normalized_name)
+            result = {"error": f"Unknown tool: {tool_name}. Available tools: list_available_houses, check_availability, create_booking, cancel_booking, get_my_bookings"}
+    except KeyError as e:
+        logger.error("Missing required argument for tool %s: %s", tool_name, e)
+        result = {"error": f"Missing required argument: {e}"}
     except Exception as e:
         logger.exception("Tool execution failed: %s", tool_name)
-        result = {"error": str(e)}
+        result = {"error": f"Tool execution failed: {str(e)}"}
 
     return json.dumps(result, ensure_ascii=False)

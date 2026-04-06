@@ -32,7 +32,14 @@ export default function LoginPage() {
       if (user) {
         login(user)
         toast.success("Успешный вход")
-        router.push("/dashboard")
+        
+        // Redirect based on user role
+        if (user.role === "tenant") {
+          router.push("/tenant/houses")
+        } else {
+          // owner или both → dashboard
+          router.push("/dashboard")
+        }
       } else {
         toast.error("Пользователь не найден")
       }

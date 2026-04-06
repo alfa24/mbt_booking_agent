@@ -3,6 +3,7 @@ import ky from 'ky'
 export const api = ky.create({
   prefixUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
   timeout: 30000,
+  credentials: 'include', // Send cookies with requests
 })
 
 export interface User {

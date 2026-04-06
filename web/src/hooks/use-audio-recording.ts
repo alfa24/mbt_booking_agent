@@ -53,9 +53,31 @@ export function useAudioRecording(): UseAudioRecordingReturn {
 
   // Check for browser support
   useEffect(() => {
-    const supported = typeof window !== 'undefined' &&
-      !!window.navigator?.mediaDevices?.getUserMedia &&
-      !!window.MediaRecorder
+    if (typeof window === 'undefined') {
+      setIsSupported(false)
+      return
+    }
+
+    const hasMediaDevices = !!window.navigator?.mediaDevices?.getUserMedia
+    const hasMediaRecorder = !!window.MediaRecorder
+    
+    // Check for secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1'
+    const hasSecureContext = isSecureContext || isLocalhost
+
+    const supported = hasMediaDevices && hasMediaRecorder && hasSecureContext
+    
+    if (!hasSecureContext) {
+      console.warn('[AudioRecording] Secure context required (HTTPS or localhost)')
+      console.warn('[AudioRecording] Current context:', {
+        isSecureContext,
+        isLocalhost,
+        hostname: window.location.hostname
+      })
+    }
+    
     setIsSupported(supported)
   }, [])
 
@@ -95,10 +117,20 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       })
 
       if (!response.ok) {
+        console.error('[AudioRecording] Server error:', {
+          status: response.status,
+          statusText: response.statusText
+        })
+        
         if (response.status === 400) {
           throw new Error('transcription-failed')
+        } else if (response.status === 401 || response.status === 403) {
+          throw new Error('not-allowed')
+        } else if (response.status >= 500) {
+          throw new Error('network-error')
+        } else {
+          throw new Error('transcription-failed')
         }
-        throw new Error('network-error')
       }
 
       const data = await response.json()
@@ -106,13 +138,24 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       if (data.text) {
         setTranscript(data.text)
       } else {
+        console.warn('[AudioRecording] No text in response:', data)
         throw new Error('transcription-failed')
       }
     } catch (err) {
       console.error('[AudioRecording] Transcription error:', err)
-      const errorType = err instanceof Error && errorMessages[err.message as AudioRecordingError]
-        ? (err.message as AudioRecordingError)
-        : 'transcription-failed'
+      
+      // Determine error type
+      let errorType: AudioRecordingError = 'transcription-failed'
+      
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        errorType = 'network-error'
+      } else if (err instanceof Error) {
+        const msg = err.message as AudioRecordingError
+        if (errorMessages[msg]) {
+          errorType = msg
+        }
+      }
+      
       setError(errorType)
     } finally {
       setIsProcessing(false)

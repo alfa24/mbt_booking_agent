@@ -1,6 +1,7 @@
 .PHONY: install run lint format docker-build docker-run docker-down docker-restart
 .PHONY: run-backend run-backend-logs stop-backend build-backend lint-backend format-backend test-backend
 .PHONY: install-frontend run-frontend build-frontend lint-frontend
+.PHONY: run-bot stop-bot logs-bot
 
 install:
 	uv sync
@@ -86,3 +87,13 @@ lint-frontend:
 # Fixtures commands (Docker)
 backend-fixtures:
 	docker compose exec backend uv run python -m backend.fixtures.load_fixtures
+
+# Bot commands
+run-bot:
+	docker compose up -d bot
+
+stop-bot:
+	docker compose stop bot
+
+logs-bot:
+	docker compose logs bot -f

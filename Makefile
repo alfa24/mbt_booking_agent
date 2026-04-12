@@ -57,13 +57,13 @@ test-backend-cov: test-backend
 
 # Database commands (Docker)
 migrate:
-	docker compose exec backend uv run alembic upgrade head
+	docker compose run --rm backend uv run alembic upgrade head
 
 migrate-create:
-	docker compose exec backend uv run alembic revision --autogenerate -m "$(name)"
+	docker compose run --rm backend uv run alembic revision --autogenerate -m "$(name)"
 
 migrate-down:
-	docker compose exec backend uv run alembic downgrade -1
+	docker compose run --rm backend uv run alembic downgrade -1
 
 postgres-up:
 	docker compose up postgres -d

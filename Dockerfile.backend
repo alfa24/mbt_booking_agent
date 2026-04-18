@@ -1,19 +1,45 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
+
+# Install uv and curl for health checks, create non-root user
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv \
+    && useradd -m -u 1000 -s /bin/bash appuser
 
 WORKDIR /app
 
-# Install uv
-RUN pip install uv
+# Copy dependency files first for better layer caching
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+# Production stage
+FROM base AS production
 
-# Install dependencies (including dev group for tests)
-RUN uv sync --group dev
+RUN uv sync --frozen --no-dev && chown -R appuser:appuser /app/.venv
 
-# Copy backend code
-COPY backend/ ./backend/
+COPY --chown=appuser:appuser backend/ ./backend/
+
+USER appuser
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8000/api/v1/health || exit 1
+
+STOPSIGNAL SIGTERM
+
+CMD ["uv", "run", "python", "-m", "backend.main"]
+
+# Development stage
+FROM base AS dev
+
+RUN uv sync --frozen --group dev && chown -R appuser:appuser /app/.venv
+
+COPY --chown=appuser:appuser backend/ ./backend/
+
+USER appuser
+
+EXPOSE 8000
+
+ENV PYTHONUNBUFFERED=1
 
 CMD ["uv", "run", "python", "-m", "backend.main"]

@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Virtual environments
+.venv
+venv/
+ENV/
+
+# Node
+node_modules/
+.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Tests
+tests/
+test_*.py
+conftest.py
+fixtures/
+
+# CI/CD
+.github/
+
+# OS
+.DS_Store
+Thumbs.db

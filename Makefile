@@ -1,7 +1,14 @@
-.PHONY: install run lint format docker-build docker-run docker-down docker-restart
-.PHONY: run-backend run-backend-logs stop-backend build-backend lint-backend format-backend test-backend
+.PHONY: install run lint format
+.PHONY: docker-build docker-run docker-down docker-restart docker-status docker-logs docker-health
+.PHONY: run-backend run-backend-logs stop-backend build-backend lint-backend format-backend test-backend test-backend-cov
+.PHONY: migrate migrate-create migrate-down postgres-up postgres-logs
 .PHONY: install-frontend run-frontend build-frontend lint-frontend
-.PHONY: run-bot stop-bot logs-bot
+.PHONY: run-bot stop-bot logs-bot backend-fixtures
+
+# Conditional override file inclusion
+BASE_COMPOSE = -f docker-compose.yaml
+BASE_OVERRIDE = $(shell test -f docker-compose.override.yml && echo '-f docker-compose.override.yml')
+COMPOSE = docker compose $(BASE_COMPOSE) $(BASE_OVERRIDE)
 
 install:
 	uv sync
@@ -15,68 +22,75 @@ lint:
 format:
 	uv run ruff format .
 
+# Docker core commands
 docker-build:
-	docker compose build
+	$(COMPOSE) build
 
 docker-run:
-	docker compose up
-
-docker-run-no-override:
-	docker compose -f docker-compose.yaml up
+	$(COMPOSE) up
 
 docker-down:
-	docker compose down
+	$(COMPOSE) down
 
 docker-restart:
-	docker compose down && docker compose up --build
+	$(COMPOSE) down && $(COMPOSE) up --build
+
+docker-status:
+	$(COMPOSE) ps
+
+docker-logs:
+	$(COMPOSE) logs -f
+
+docker-health:
+	$(COMPOSE) ps --format json | jq -r '.[] | "\(.Service): \(.State)"'
 
 # Backend commands (Docker)
 run-backend:
-	docker compose up backend -d
+	$(COMPOSE) up backend -d
 
 run-backend-logs:
-	docker compose logs backend -f
+	$(COMPOSE) logs backend -f
 
 stop-backend:
-	docker compose stop backend
+	$(COMPOSE) stop backend
 
 build-backend:
-	docker compose build backend
+	$(COMPOSE) build backend
 
 lint-backend:
-	docker compose exec backend uv run ruff check backend/
+	$(COMPOSE) exec backend uv run ruff check backend/
 
 format-backend:
-	docker compose exec backend uv run ruff format backend/
+	$(COMPOSE) exec backend uv run ruff format backend/
 
 test-backend:
-	docker compose exec backend uv run pytest backend/tests/ -v $(ARGS)
+	$(COMPOSE) exec backend uv run pytest backend/tests/ -v $(ARGS)
 
 test-backend-cov: ARGS=--cov=backend --cov-report=term-missing --cov-report=html:htmlcov
 test-backend-cov: test-backend
 
 # Database commands (Docker)
 migrate:
-	docker compose run --rm backend uv run alembic upgrade head
+	$(COMPOSE) run --rm backend uv run alembic upgrade head
 
 migrate-create:
-	docker compose run --rm backend uv run alembic revision --autogenerate -m "$(name)"
+	$(COMPOSE) run --rm backend uv run alembic revision --autogenerate -m "$(name)"
 
 migrate-down:
-	docker compose run --rm backend uv run alembic downgrade -1
+	$(COMPOSE) run --rm backend uv run alembic downgrade -1
 
 postgres-up:
-	docker compose up postgres -d
+	$(COMPOSE) up postgres -d
 
 postgres-logs:
-	docker compose logs postgres -f
+	$(COMPOSE) logs postgres -f
 
 # Frontend commands
 install-frontend:
 	cd web && npm install
 
 run-frontend:
-	docker compose up web
+	$(COMPOSE) up web
 
 build-frontend:
 	cd web && npm run build
@@ -86,14 +100,14 @@ lint-frontend:
 
 # Fixtures commands (Docker)
 backend-fixtures:
-	docker compose exec backend uv run python -m backend.fixtures.load_fixtures
+	$(COMPOSE) exec backend uv run python -m backend.fixtures.load_fixtures
 
 # Bot commands
 run-bot:
-	docker compose up -d bot
+	$(COMPOSE) up -d bot
 
 stop-bot:
-	docker compose stop bot
+	$(COMPOSE) stop bot
 
 logs-bot:
-	docker compose logs bot -f
+	$(COMPOSE) logs bot -f

@@ -15,30 +15,14 @@ services:
     networks:
       - backend-network
 
-  bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file: .env
-    environment:
-      - BOT_BACKEND_URL=http://backend:8000/api/v1
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-      target: production
+    image: ghcr.io/alfa24/mbt_booking_agent-backend:latest
     environment:
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
       - BACKEND_LOG_LEVEL=INFO
       - BACKEND_DATABASE_URL=postgresql+asyncpg://booking:booking@postgres/booking
-    env_file:
-      - .env
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,17 +34,53 @@ services:
       retries: 3
     networks:
       - backend-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+    image: ghcr.io/alfa24/mbt_booking_agent-frontend:latest
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
     depends_on:
       - backend
     networks:
       - backend-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  bot:
+    image: ghcr.io/alfa24/mbt_booking_agent-bot:latest
+    env_file: .env
+    environment:
+      - BOT_BACKEND_URL=http://backend:8000/api/v1
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - backend-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
 networks:
   backend-network:

@@ -40,8 +40,10 @@ RUN corepack enable
 # Copy built artifacts with proper ownership
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public || true
-RUN if [ -d ./public ]; then chown -R nextjs:nodejs ./public; fi
+# Copy public directory if it exists (using shell to handle optional copy)
+RUN if [ -d /app/public ] && [ "$(ls -A /app/public 2>/dev/null)" ]; then \
+        cp -r /app/public ./public && chown -R nextjs:nodejs ./public; \
+    fi
 
 USER nextjs
 

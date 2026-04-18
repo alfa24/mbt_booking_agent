@@ -3,6 +3,7 @@ FROM python:3.12-slim
 # Install curl for health checks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    && apt-get upgrade -y openssl libssl3t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv and create non-root user

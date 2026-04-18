@@ -23,6 +23,8 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY web/ .
 RUN npm run build
+# Ensure public dir exists even if empty (Docker skips empty dirs in context)
+RUN mkdir -p /app/public
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -38,7 +40,8 @@ RUN corepack enable
 # Copy built artifacts with proper ownership
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public || true
+RUN if [ -d ./public ]; then chown -R nextjs:nodejs ./public; fi
 
 USER nextjs
 
